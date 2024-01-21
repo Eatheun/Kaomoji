@@ -32,6 +32,19 @@ def paste():
     pag.keyUp('v');
     pag.keyUp('ctrl');
 
+# retrieves the category and Kaotype for the user
+def retrieveData(catInd, typeInd):
+    category = "";
+    for key in dat.all.keys():
+        category = key;
+        if (catInd := catInd - 1) < 0: break;
+    kaoType = "";
+    for key in dat.all[category].keys():
+        kaoType = key;
+        if (typeInd := typeInd - 1) < 0: break;
+
+    return category, kaoType;
+
 ################################-#-##-#-################################
 ################################  MAIN  ################################
 ################################-#-##-#-################################
@@ -39,24 +52,15 @@ def paste():
 # # gather necessary data, first index is for categories, second for Kaotype
 # catInd = 0;
 # typeInd = 0;
-
-# # retrieve from the database
-# category = "";
-# for key in dat.all.keys():
-#     category = key;
-#     if (catInd := catInd - 1) < 0: break;
-# kaoType = "";
-# for key in dat.all[category].keys():
-#     kaoType = key;
-#     if (typeInd := typeInd - 1) < 0: break;
+# category, kaoType = retrieveData(catInd, typeInd);
 
 # # copy to clipboard
 # copyKaoClpbrd(category, kaoType, dat.all[category][kaoType]);
 
 # # click into Discord
-# screenW = int(wapi.GetSystemMetrics(0)) >> 2;
-# screenH = int(wapi.GetSystemMetrics(1)); screenH -= screenH / 20;
-# click(int(screenW), int(screenH));
+# screenW = int(wapi.GetSystemMetrics(0));
+# screenH = int(wapi.GetSystemMetrics(1));
+# click(int(screenW >> 2), int(screenH * 19 / 20));
 
 # # paste into message box
 # paste(); pag.keyDown('enter'); pag.keyUp('enter');
@@ -88,7 +92,7 @@ outputLabel = widg.Label(
 );
 
 # event
-window.bind("<Any-KeyPress-Return>", lambda event: convert());
+window.bind("<KeyPress-Return>", lambda event: convert());
 
 # packing
 titleLabel.pack();
