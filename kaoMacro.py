@@ -3,7 +3,7 @@ import time
 import random
 import win32api as wapi, win32con as wcon
 import pyperclip as clpbrd
-import kaoCat as dat
+from kaoCat import *
 import tkinter as tk
 import ttkbootstrap as widg
 
@@ -35,15 +35,23 @@ def paste():
 # retrieves the category and Kaotype for the user
 def retrieveData(catInd, typeInd):
     category = "";
-    for key in dat.all.keys():
+    for key in all.keys():
         category = key;
         if (catInd := catInd - 1) < 0: break;
     kaoType = "";
-    for key in dat.all[category].keys():
+    for key in all[category].keys():
         kaoType = key;
         if (typeInd := typeInd - 1) < 0: break;
 
     return category, kaoType;
+
+################################ STAGE 4 ################################
+
+def drawWin():
+    window = widg.Window(themename = "vapor");
+    window.title("顔ウィール");
+    window.geometry("800x600");
+    return window;
 
 ################################-#-##-#-################################
 ################################  MAIN  ################################
@@ -55,7 +63,7 @@ def retrieveData(catInd, typeInd):
 # category, kaoType = retrieveData(catInd, typeInd);
 
 # # copy to clipboard
-# copyKaoClpbrd(category, kaoType, dat.all[category][kaoType]);
+# copyKaoClpbrd(category, kaoType, all[category][kaoType]);
 
 # # click into Discord
 # screenW = int(wapi.GetSystemMetrics(0));
@@ -65,41 +73,43 @@ def retrieveData(catInd, typeInd):
 # # paste into message box
 # paste(); pag.keyDown('enter'); pag.keyUp('enter');
 
-def convert():
-    initVal = entIntVal.get() * 2;
-    outStr.set(initVal);
+# helper funkies
+def grabTypes(cate):
+    types = [];
+    if cate in all:
+        for kaoType in all[cate]: types.append(kaoType);
+    return types;
+
+def grabCate(strVar):
+    return strVar.get();
+
+def setTypesCombVal(typesComB, types):
+    typesComB.config(values = types);
 
 # make window
-window = widg.Window(themename = "vapor");
-window.title("顔ウィール");
-window.geometry("800x600");
+window = drawWin();
 
-# words
+# big title
 titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = ("Comic Sans MS Bold", 30));
 
-# clickies
-inputFrame = widg.Frame(master = window);
-entIntVal = tk.IntVar();
-entry = widg.Entry(master = inputFrame, textvariable = entIntVal);
-button = widg.Button(master = inputFrame, text = "MEEEEEE!!!", command = convert);
+# combos
+inCate = tk.StringVar(); inCate.set("");
+catComB = widg.Combobox(master = window, values = list(all.keys()), textvariable = inCate);
+typesComB = widg.Combobox(master = window);
 
-# outies
-outStr = tk.StringVar();
-outputLabel = widg.Label(
-    master = window,
-    font = ("Comic Sans MS", 18),
-    textvariable = outStr
+# events
+typesComB.bind(
+    "<Enter>",
+    lambda event: setTypesCombVal(
+        typesComB,
+        grabTypes(inCate.get())
+    )
 );
-
-# event
-window.bind("<KeyPress-Return>", lambda event: convert());
 
 # packing
 titleLabel.pack();
-entry.pack(side = "left", padx = 20);
-button.pack(side = "left");
-inputFrame.pack(pady = 20);
-outputLabel.pack();
+catComB.pack(pady = 10);
+typesComB.pack(pady = 10);
 
 # run Forest run
 window.mainloop();
