@@ -9,71 +9,39 @@ import ttkbootstrap as widg
 
 ################################ STAGE 3 ################################
 
-# wtf do you think this does
-def click(x, y):
-	wapi.SetCursorPos((x, y));
-	wapi.mouse_event(wcon.MOUSEEVENTF_LEFTDOWN, 0, 0);
-	time.sleep(0.1);
-	wapi.mouse_event(wcon.MOUSEEVENTF_LEFTUP, 0, 0);
-
 # Gets a random Kaomoji and copies it to the clipboard
-def copyKaoClpbrd(category, kaoType, kaoNum):
+def copyKaoClpbrd(category, kaoType):
+    # check before
+    if not category in all or not kaoType in all[category]: return;
+    kaoNum = all[category][kaoType];
+    
     # concatenating the giant relative path
     filepath = "./All Kaomojis" + "/" + category + "/" + kaoType + ".txt";
     with open(filepath, "r", encoding = "utf-8") as kaoFile:
+        # find and grab the kaomoji
         kaomoji = "";
         for i in range(random.randrange(kaoNum)): kaomoji = kaoFile.readline();
+        kaomoji = kaomoji.removesuffix("\n");
+        
+        # copy to clipboard and print for debugging
         clpbrd.copy(kaomoji);
-
-# CRTL + V
-def paste():
-    pag.keyDown('ctrl');
-    pag.keyDown('v');
-    pag.keyUp('v');
-    pag.keyUp('ctrl');
-
-# retrieves the category and Kaotype for the user
-def retrieveData(catInd, typeInd):
-    category = "";
-    for key in all.keys():
-        category = key;
-        if (catInd := catInd - 1) < 0: break;
-    kaoType = "";
-    for key in all[category].keys():
-        kaoType = key;
-        if (typeInd := typeInd - 1) < 0: break;
-
-    return category, kaoType;
+        print(kaomoji);
+        
+        # retry if we somehow found a blank
+        if kaomoji == "": copyKaoClpbrd(category, kaoType);
 
 ################################ STAGE 4 ################################
 
+myFont = "Comic Sans MS Bold";
+myResSize = "480x300";
+
+# helper funkies
 def drawWin():
     window = widg.Window(themename = "vapor");
     window.title("顔ウィール");
-    window.geometry("800x600");
+    window.geometry(myResSize);
     return window;
 
-################################-#-##-#-################################
-################################  MAIN  ################################
-################################-#-##-#-################################
-
-# # gather necessary data, first index is for categories, second for Kaotype
-# catInd = 0;
-# typeInd = 0;
-# category, kaoType = retrieveData(catInd, typeInd);
-
-# # copy to clipboard
-# copyKaoClpbrd(category, kaoType, all[category][kaoType]);
-
-# # click into Discord
-# screenW = int(wapi.GetSystemMetrics(0));
-# screenH = int(wapi.GetSystemMetrics(1));
-# click(int(screenW >> 2), int(screenH * 19 / 20));
-
-# # paste into message box
-# paste(); pag.keyDown('enter'); pag.keyUp('enter');
-
-# helper funkies
 def grabTypes(cate):
     types = [];
     if cate in all:
@@ -83,33 +51,55 @@ def grabTypes(cate):
 def grabCate(strVar):
     return strVar.get();
 
-def setTypesCombVal(typesComB, types):
+def setTypesCombVal(types):
     typesComB.config(values = types);
+    inType.set("");
+
+################################-#-##-#-################################
+################################  MAIN  ################################
+################################-#-##-#-################################
 
 # make window
 window = drawWin();
 
 # big title
-titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = ("Comic Sans MS Bold", 30));
+titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = (myFont, 18));
+
+# clickies
+entButt = widg.Button(master = window, text = "Enter");
 
 # combos
-inCate = tk.StringVar(); inCate.set("");
-catComB = widg.Combobox(master = window, values = list(all.keys()), textvariable = inCate);
-typesComB = widg.Combobox(master = window);
+inCate = tk.StringVar(value = "");
+catComB = widg.Combobox(
+    master = window,
+    values = list(all.keys()),
+    textvariable = inCate,
+    font = (myFont, 8),
+    state = "readonly"
+);
+inType = tk.StringVar(value = "");
+typesComB = widg.Combobox(
+    master = window,
+    textvariable = inType,
+    font = (myFont, 8),
+    state = "readonly"
+);
 
 # events
-typesComB.bind(
-    "<Enter>",
-    lambda event: setTypesCombVal(
-        typesComB,
-        grabTypes(inCate.get())
-    )
+catComB.bind(
+    "<<ComboboxSelected>>",
+    lambda event: setTypesCombVal(grabTypes(inCate.get()))
+);
+for event in ["<Button>", "<KeyPress-Return>"]: entButt.bind(
+    sequence = event,
+    func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
 );
 
 # packing
 titleLabel.pack();
 catComB.pack(pady = 10);
 typesComB.pack(pady = 10);
+entButt.pack(pady = 10);
 
 # run Forest run
 window.mainloop();
