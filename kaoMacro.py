@@ -6,6 +6,8 @@ import pyperclip as clpbrd
 from kaoCat import *
 import tkinter as tk
 import ttkbootstrap as widg
+import numpy as np
+from math import *
 
 ################################ STAGE 3 ################################
 
@@ -33,7 +35,7 @@ def copyKaoClpbrd(category, kaoType):
 ################################ STAGE 4 ################################
 
 myFont = "Comic Sans MS Bold";
-myResSize = "480x300";
+myResSize = "640x480";
 
 # helper funkies
 def drawWin():
@@ -42,18 +44,44 @@ def drawWin():
     window.geometry(myResSize);
     return window;
 
+# grabs all the kaoTypes from a category
 def grabTypes(cate):
     types = [];
     if cate in all:
         for kaoType in all[cate]: types.append(kaoType);
     return types;
 
+# grabs the category selected in the combobox
 def grabCate(strVar):
     return strVar.get();
 
+# sets values of the types combobox based on the category selected
 def setTypesCombVal(types):
     typesComB.config(values = types);
     inType.set("");
+
+# draws a bunch of top-truncated triangles in a circle
+def drawTriCircle(circle, pcs):
+    cntr = 280;
+    outR = 160;
+    inR = 60;
+    off = 6;
+    
+    for i in np.linspace(0, 360, pcs + 1):
+        if i == 360: continue;
+        curr = radians(i + off);
+        next = radians(i + 360 / pcs - off);
+        cosCur = cos(curr); cosNext = cos(next);
+        sinCur = sin(curr); sinNext = sin(next);
+        
+        circle.create_polygon(
+            cntr + outR * cosCur, outR + outR * sinCur,
+            cntr + outR * cosNext, outR + outR * sinNext,
+            cntr + inR * cosNext, outR + inR * sinNext,
+            cntr + inR * cosCur, outR + inR * sinCur,
+            fill = "red"
+        );
+    
 
 ################################-#-##-#-################################
 ################################  MAIN  ################################
@@ -61,6 +89,10 @@ def setTypesCombVal(types):
 
 # make window
 window = drawWin();
+
+# shapes
+myCoord = (80, 0, 640 - (80 << 1), 100);
+cateCircle = tk.Canvas(master = window);
 
 # big title
 titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = (myFont, 18));
@@ -95,11 +127,15 @@ for event in ["<Button>", "<KeyPress-Return>"]: entButt.bind(
     func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
 );
 
-# packing
+# packing order
 titleLabel.pack();
+cateCircle.pack();
 catComB.pack(pady = 10);
 typesComB.pack(pady = 10);
 entButt.pack(pady = 10);
+
+# these will change as we select the goodies
+drawTriCircle(cateCircle, 9);
 
 # run Forest run
 window.mainloop();
