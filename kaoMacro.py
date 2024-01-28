@@ -4,7 +4,7 @@ import random
 import win32api as wapi, win32con as wcon
 import pyperclip as clpbrd
 from kaoCat import *
-import tkinter as tk
+from tkinter import *
 import ttkbootstrap as widg
 import numpy as np
 from math import *
@@ -61,16 +61,20 @@ def setTypesCombVal(types):
     inType.set("");
 
 # draws a bunch of top-truncated triangles in a circle
-def drawTriCircle(circle, pcs):
-    cntr = 280;
-    outR = 160;
-    inR = 60;
-    off = 6;
+def drawCircle(circle, pcs):
+    if pcs == 0: return circle;
     
-    for i in np.linspace(0, 360, pcs + 1):
-        if i == 360: continue;
-        curr = radians(i + off);
-        next = radians(i + 360 / pcs - off);
+    # basic metrics
+    cntr = 60;
+    outR = 28;
+    inR = 8;
+    off = 2;
+    
+    # loop through angles as cosi + isini
+    angles = np.linspace(90, 450, pcs + 1);
+    for i in range(pcs):
+        curr = radians(angles[i] + off);
+        next = radians(angles[i] + 360 / pcs - off);
         cosCur = cos(curr); cosNext = cos(next);
         sinCur = sin(curr); sinNext = sin(next);
         
@@ -79,9 +83,15 @@ def drawTriCircle(circle, pcs):
             cntr + outR * cosNext, outR + outR * sinNext,
             cntr + inR * cosNext, outR + inR * sinNext,
             cntr + inR * cosCur, outR + inR * sinCur,
-            fill = "red"
+            fill = "red",
+            tags = ("polygon")
         );
     
+    return circle;
+
+def setDrawCircle(circle, pcs):
+    circle.delete("polygon");
+    circle = drawCircle(circle, pcs);
 
 ################################-#-##-#-################################
 ################################  MAIN  ################################
@@ -90,9 +100,9 @@ def drawTriCircle(circle, pcs):
 # make window
 window = drawWin();
 
-# shapes
-myCoord = (80, 0, 640 - (80 << 1), 100);
-cateCircle = tk.Canvas(master = window);
+# circles
+cateCircle = Canvas(master = window, width = 120, height = 60);
+typeCircle = Canvas(master = window, width = 120, height = 60);
 
 # big title
 titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = (myFont, 18));
@@ -101,7 +111,7 @@ titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = (myF
 entButt = widg.Button(master = window, text = "Enter");
 
 # combos
-inCate = tk.StringVar(value = "");
+inCate = StringVar(value = "");
 catComB = widg.Combobox(
     master = window,
     values = list(all.keys()),
@@ -109,7 +119,7 @@ catComB = widg.Combobox(
     font = (myFont, 8),
     state = "readonly"
 );
-inType = tk.StringVar(value = "");
+inType = StringVar(value = "");
 typesComB = widg.Combobox(
     master = window,
     textvariable = inType,
@@ -117,25 +127,40 @@ typesComB = widg.Combobox(
     state = "readonly"
 );
 
-# events
+# sets the values of the types combobox to the types of the category selected
 catComB.bind(
     "<<ComboboxSelected>>",
     lambda event: setTypesCombVal(grabTypes(inCate.get()))
 );
+
+# when entered, copies a Kaomoji to the clipboard
 for event in ["<Button>", "<KeyPress-Return>"]: entButt.bind(
     sequence = event,
     func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
 );
 
+# experimental circle production
+catComB.bind(
+    "<<ComboboxSelected>>",
+    lambda event: setDrawCircle(
+        typeCircle,
+        len(typesComB["values"])
+    ),
+    add = "+"
+);
+
 # packing order
 titleLabel.pack();
-cateCircle.pack();
+cateCircle.pack(); typeCircle.pack();
 catComB.pack(pady = 10);
 typesComB.pack(pady = 10);
 entButt.pack(pady = 10);
 
-# these will change as we select the goodies
-drawTriCircle(cateCircle, 9);
+# draw the circles
+setDrawCircle(
+    cateCircle,
+    len(catComB["values"])
+);
 
 # run Forest run
 window.mainloop();
