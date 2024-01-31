@@ -1,5 +1,4 @@
 import pyautogui as pag
-import time
 import random
 import win32api as wapi, win32con as wcon
 import pyperclip as clpbrd
@@ -11,7 +10,7 @@ from math import *
 
 ################################ STAGE 3 ################################
 
-# Gets a random Kaomoji and copies it to the clipboard
+# Gets a random Kaomoji from all[category][kaoType] and copies it to the clipboard
 def copyKaoClpbrd(category, kaoType):
     # check before
     if not category in all or not kaoType in all[category]: return;
@@ -34,14 +33,21 @@ def copyKaoClpbrd(category, kaoType):
 
 ################################ STAGE 4 ################################
 
+# a bunch of metrics and constants
 myFont = "Comic Sans MS Bold";
-myResSize = "640x480";
+winSize = "640x480";
+paddingY = 10;
+circOutR = 120;
+circInR = 30;
+canvH = circOutR * 2 + paddingY;
+canvW = 300;
+circAngleOffset = 10;
 
 # helper funkies
 def drawWin():
     window = widg.Window(themename = "vapor");
     window.title("顔ウィール");
-    window.geometry(myResSize);
+    window.geometry(winSize);
     return window;
 
 # grabs all the kaoTypes from a category
@@ -61,56 +67,70 @@ def setTypesCombVal(types):
     inType.set("");
 
 # draws a bunch of top-truncated triangles in a circle
-def drawCircle(circle, pcs):
+def drawCircle(circle, pcs, angleOff):
     if pcs == 0: return circle;
     
     # basic metrics
-    cntr = 60;
-    outR = 28;
-    inR = 8;
-    off = 2;
+    cntr = canvW / 2;
+    radii = [circOutR, circInR];
+    outOff = radians(min(angleOff, 180 / pcs));
+    inOff = atan((radii[1] / radii[0]) * (tan(outOff)));
     
     # loop through angles as cosi + isini
     angles = np.linspace(90, 450, pcs + 1);
     for i in range(pcs):
-        curr = radians(angles[i] + off);
-        next = radians(angles[i] + 360 / pcs - off);
-        cosCur = cos(curr); cosNext = cos(next);
-        sinCur = sin(curr); sinNext = sin(next);
+        curr = radians(angles[i]);
+        next = radians(angles[i] + 360 / pcs);
+        pointOrder = [
+            curr + inOff,
+            next - inOff,
+            next - outOff,
+            curr + outOff
+        ]; # order of the angles for each point
+        
+        polygonPoints = [];
+        for i in range(4): # 4 points
+            currRad = radii[i > 1]; # cheaty cheaty
+            polygonPoints.append(
+                (
+                    cntr + currRad * cos(pointOrder[i]), # x value
+                    radii[0] + currRad * sin(pointOrder[i]) # y value
+                )
+            );
         
         circle.create_polygon(
-            cntr + outR * cosCur, outR + outR * sinCur,
-            cntr + outR * cosNext, outR + outR * sinNext,
-            cntr + inR * cosNext, outR + inR * sinNext,
-            cntr + inR * cosCur, outR + inR * sinCur,
-            fill = "red",
+            polygonPoints,
+            fill = "turquoise4",
+            outline = "LightSteelBlue1",
+            width = 5,
             tags = ("polygon")
         );
     
     return circle;
 
-def setDrawCircle(circle, pcs):
+# clears and draws near circles
+def setDrawCircle(circle, pcs, angleOff):
     circle.delete("polygon");
-    circle = drawCircle(circle, pcs);
+    circle = drawCircle(circle, pcs, angleOff);
 
 ################################-#-##-#-################################
 ################################  MAIN  ################################
 ################################-#-##-#-################################
 
-# make window
+# make window and title
 window = drawWin();
+titleLabel = widg.Label(
+    master = window,
+    text = "Select a Kaomoji:",
+    font = (myFont, 18)
+);
 
 # circles
-cateCircle = Canvas(master = window, width = 120, height = 60);
-typeCircle = Canvas(master = window, width = 120, height = 60);
-
-# big title
-titleLabel = widg.Label(master = window, text = "Select a Kaomoji:", font = (myFont, 18));
-
-# clickies
+cateCircle = Canvas(master = window, width = canvW, height = canvH);
+typeCircle = Canvas(master = window, width = canvW, height = canvH);
 entButt = widg.Button(master = window, text = "Enter");
 
-# combos
+# C-C-C-C-COMBOOOBOOOOOOX
 inCate = StringVar(value = "");
 catComB = widg.Combobox(
     master = window,
@@ -127,39 +147,40 @@ typesComB = widg.Combobox(
     state = "readonly"
 );
 
-# sets the values of the types combobox to the types of the category selected
-catComB.bind(
-    "<<ComboboxSelected>>",
-    lambda event: setTypesCombVal(grabTypes(inCate.get()))
-);
-
-# when entered, copies a Kaomoji to the clipboard
-for event in ["<Button>", "<KeyPress-Return>"]: entButt.bind(
-    sequence = event,
-    func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
-);
-
-# experimental circle production
-catComB.bind(
-    "<<ComboboxSelected>>",
-    lambda event: setDrawCircle(
-        typeCircle,
-        len(typesComB["values"])
-    ),
-    add = "+"
-);
-
 # packing order
 titleLabel.pack();
 cateCircle.pack(); typeCircle.pack();
-catComB.pack(pady = 10);
-typesComB.pack(pady = 10);
-entButt.pack(pady = 10);
+catComB.pack(pady = paddingY);
+typesComB.pack(pady = paddingY);
+entButt.pack(pady = paddingY);
+
+# when entered, copies a Kaomoji to the clipboard
+for action in ["<Button>", "<KeyPress-Return>"]: entButt.bind(
+    sequence = action,
+    func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
+);
+
+# whenever we select a category, we will:
+#   1. set the selectable values for the types combobox
+#   2. redraw the circle for said types combobox
+events = [
+    lambda event: setTypesCombVal(
+        grabTypes(inCate.get())
+    ),
+    lambda event: setDrawCircle(
+        typeCircle,
+        len(typesComB["values"]),
+        circAngleOffset
+    )
+];
+for event in events:
+    catComB.bind("<<ComboboxSelected>>", event, add = "+");
 
 # draw the circles
 setDrawCircle(
     cateCircle,
-    len(catComB["values"])
+    len(catComB["values"]),
+    circAngleOffset
 );
 
 # run Forest run
