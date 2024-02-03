@@ -86,10 +86,6 @@ def setTypesCombVal(types):
     typesComB.config(values = types);
     inType.set("");
 
-# does something special when a specific polygon is selected
-def polygonAction(polygon):
-    print(str(polygon));
-
 # initiates a new circle canvas
 def circleInit(frame):
     return Canvas(
@@ -191,7 +187,7 @@ def packTopFrame():
 
 # middle
 def packMiddleFrame():
-	middleFrame.pack(pady = padding, fill = BOTH, expand = True);
+	middleFrame.pack(pady = padding);
 	cateFrame.pack(side = "left");
 	cateCircle.pack(pady = padding); catComB.pack(pady = padding);
 	typeFrame.pack(side = "left");
