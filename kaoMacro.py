@@ -1,3 +1,4 @@
+from xmlrpc.client import boolean
 import pyautogui as pag
 import time
 import random
@@ -42,7 +43,7 @@ circInR = 80;
 canvH = circOutR * 2;
 canvW = circOutR * 2;
 circAngleOffset = 10;
-winSize = str(canvW * 2) + "x" + str(canvH * 2);
+winSize = f'{canvW * 2}x{canvH * 2}';
 winTrans = 0.2;
 
 # helper funkies
@@ -62,25 +63,20 @@ def drawWin():
     window.wm_attributes("-transparentcolor", "#add123");
     return window;
 
-fadeSteps = 4;
+def centreWin(window):
+	displayXOff = int(window.winfo_screenwidth() / 2 - canvW);
+	displayYOff = int(window.winfo_screenheight() / 2 - canvH);
+	window.geometry(f'{winSize}+{displayXOff}+{displayYOff}');
+	return window;
+
+fadeSteps = 5;
 fadeIncr = (1 - winTrans) / fadeSteps;
 
-def fadeIn():
-    for i in range(fadeSteps):
-        window.attributes("-alpha", winTrans + (i + 1) * fadeIncr);
-        time.sleep(0.01);
-
-def fadeOut():
-    for i in range(fadeSteps):
-        window.attributes("-alpha", 1 - i * fadeIncr);
-        time.sleep(0.01);
-
-# grabs all the kaoTypes from a category
-def grabTypes(cate):
-    types = [];
-    if cate in all:
-        for kaoType in all[cate]: types.append(kaoType);
-    return types;
+def fade(isIn: boolean):
+	start = winTrans if isIn else 1;
+	for i in range(fadeSteps):
+		kaoWin.attributes("-alpha", start + (1 if isIn else -1) * (i + 1) * fadeIncr);
+		time.sleep(0.02);
 
 # sets values of the types combobox based on the category selected
 def setTypesCombVal(types):
@@ -106,7 +102,7 @@ def drawCircle(circle, pcs, angleOff, overlayText):
     for i in range(pcs):
         curr = radians(angles[i]);
         next = radians(angles[i] + 360 / pcs);
-        pointOrder = [
+        order = [
             curr + inOff,
             next - inOff,
             next - outOff,
@@ -119,22 +115,105 @@ def drawCircle(circle, pcs, angleOff, overlayText):
             currRad = radii[j > 1]; # cheaty cheaty
             polygonPoints.append(
                 (
-                    cntr + currRad * cos(pointOrder[j]), # x value
-                    radii[0] + currRad * sin(pointOrder[j]) # y value
+                    cntr + currRad * cos(order[j]), # x value
+                    radii[0] + currRad * sin(order[j]) # y value
                 )
             );
         
-        # draw it
-        specialTag = overlayText[i];
-        circle.create_polygon(
-            polygonPoints,
-            fill = "turquoise4",
-            disabledfill = "#add123",
-            outline = "LightSteelBlue1",
+		# out curve
+        outCurvePoints = [];
+        angleDiff = (order[1] - order[0]) / fadeSteps;
+        for i in range(fadeSteps + 1):
+            outCurvePoints.append(
+                (
+					(cntr + circOutR * cos(order[0] + i * angleDiff)),
+					radii[0] + circOutR * sin(order[0] + i * angleDiff)
+				)
+            );
+        circle.create_line(
+            outCurvePoints,
+            fill = "LightSteelBlue1",
+			smooth = True,
             width = 2,
-            tags = ("polygon", "hello" + str(i))
-        );
-        circle.tag_bind("hello" + str(i), "<Button>", lambda event: polygonAction(i));
+            tags = ("polygon")
+		);
+
+		# curr side line
+        circle.create_line(
+            [
+                (
+                    cntr + circOutR * cos(order[1]),
+                	radii[0] + circOutR * sin(order[1])
+                ),
+                (
+                    cntr + circInR * cos(order[2]),
+                	radii[0] + circInR * sin(order[2])
+                ),
+            ],
+            fill = "LightSteelBlue1",
+            width = 2,
+            tags = ("polygon")
+		);
+
+		# next side line
+        circle.create_line(
+            [
+                (
+                    cntr + circOutR * cos(order[0]),
+                	radii[0] + circOutR * sin(order[0])
+                ),
+                (
+                    cntr + circInR * cos(order[3]),
+                	radii[0] + circInR * sin(order[3])
+                ),
+            ],
+            fill = "LightSteelBlue1",
+            width = 2,
+            tags = ("polygon")
+		);
+
+		# in curve
+        inCurvePoints = [];
+        angleDiff = (order[3] - order[2]) / fadeSteps;
+        for i in range(fadeSteps + 1):
+            inCurvePoints.append(
+                (
+					(cntr + circInR * cos(order[2] + i * angleDiff)),
+					radii[0] + circInR * sin(order[2] + i * angleDiff)
+				)
+            );
+        circle.create_line(
+            inCurvePoints,
+            fill = "LightSteelBlue1",
+			smooth = True,
+            width = 2,
+            tags = ("polygon")
+		);
+        
+        # draw it
+        # specialTag = overlayText[i];
+        # circle.create_polygon(
+        #     polygonPoints,
+        #     fill = "turquoise4",
+        #     outline = "LightSteelBlue1",
+        #     width = 2,
+        #     tags = ("polygon", "hello" + str(i))
+        # );
+        # circle.tag_bind("hello" + str(i), "<Button>", lambda event: polygonAction(i));
+
+	# draw centre circle
+    offSpace = sqrt(2 * (circInR ** 2) * (1 - cos(radians(2 * angleOff))));
+    cntrCircOff = circInR - offSpace;
+    circle.create_oval(
+		[
+            (cntr - cntrCircOff, cntr - cntrCircOff),
+            (cntr + cntrCircOff, cntr + cntrCircOff)
+        ],
+		fill = "turquoise4",
+		outline = "LightSteelBlue1",
+		width = 2,
+		tags = ("centre")
+    );
 
 # clears and draws near circles
 def setDrawCircle(circle, pcs, angleOff, overlayText):
@@ -160,12 +239,12 @@ def packBottomFrame():
 	bottomFrame.pack(pady = padding);
 	entButt.pack();
 
-# makes the entire window opaque/transparent when mouse enters/leaves
+# makes the entire kaoWin opaque/transparent when mouse enters/leaves
 def bindHover(frame):
-	frame.bind("<Enter>", lambda event: fadeIn());
-	frame.bind("<Leave>", lambda event: fadeOut());
+	frame.bind("<Enter>", lambda event: fade(True));
+	frame.bind("<Leave>", lambda event: fade(False));
 
-# dragging the window around
+# dragging the kaoWin around
 lastClickX = 0;
 lastClickY = 0;
 def saveLastClickPos(event):
@@ -174,9 +253,9 @@ def saveLastClickPos(event):
     lastClickY = event.y;
 
 def dragging(event):
-	x = event.x - lastClickX + window.winfo_x();
-	y = event.y - lastClickY + window.winfo_y();
-	window.geometry("+%s+%s" % (x , y));
+	x = event.x - lastClickX + kaoWin.winfo_x();
+	y = event.y - lastClickY + kaoWin.winfo_y();
+	kaoWin.geometry("+%s+%s" % (x , y));
 
 ################################-#-##-#-################################
 ################################  MAIN  ################################
@@ -185,20 +264,20 @@ def dragging(event):
 ################################ WINDOW ################################
 
 # make window
-window = drawWin();
+kaoWin = drawWin();
+kaoWin = centreWin(kaoWin);
 
 ################################ FRAMES ################################
 
 # framing
-topFrame = Frame(window); bindHover(topFrame);
-middleFrame = Frame(window, bg = "#add123"); bindHover(middleFrame);
-bottomFrame = Frame(window, bg = "#add123"); bindHover(bottomFrame);
+topFrame = Frame(kaoWin, bg = "#add123"); bindHover(topFrame);
+middleFrame = Frame(kaoWin, bg = "#add123"); bindHover(middleFrame);
+bottomFrame = Frame(kaoWin, bg = "#add123"); bindHover(bottomFrame);
 
 ################################ CLOSE BUTTON ################################
 
-# close window button
-closeButt = widg.Button(topFrame, text = "X");
-closeButt.bind("<Button>", lambda event: window.quit());
+# close kaoWin button
+closeButt = widg.Button(topFrame, text = "X", command = lambda: kaoWin.quit());
 
 ################################ TITLE ################################
 
@@ -218,8 +297,8 @@ cateFrame = Frame(middleFrame, bg = "#add123");
 typeFrame = Frame(middleFrame, bg = "#add123");
 
 # circles
-cateCircle = Canvas(cateFrame, width = canvW, height = canvH, bg = "#add123");
-typeCircle = Canvas(typeFrame, width = canvW, height = canvH, bg = "#add123");
+cateCircle = Canvas(cateFrame, width = canvW, height = canvH, borderwidth = 3, relief = "raised");
+typeCircle = Canvas(typeFrame, width = canvW, height = canvH, borderwidth = 3, relief = "raised");
 
 # C-C-C-C-COMBOOOBOOOOOOX
 inCate = StringVar(value = "");
@@ -245,7 +324,7 @@ typesComB = widg.Combobox(
 #   2. redraw the circle for said types combobox
 events = [
     lambda event: setTypesCombVal(
-        grabTypes(inCate.get())
+        list(all[inCate.get()].keys())
     ),
     lambda event: setDrawCircle(
         typeCircle,
@@ -284,4 +363,4 @@ setDrawCircle(
 );
 
 # run Forest run
-window.mainloop();
+kaoWin.mainloop();
