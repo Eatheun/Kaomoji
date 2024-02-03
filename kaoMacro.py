@@ -36,20 +36,25 @@ def copyKaoClpbrd(category, kaoType):
 ################################ STAGE 4 ################################
 
 # a bunch of metrics and constants
-myFont = "Comic Sans MS Bold";
-padding = 10;
-circOutR = 240;
-circInR = 80;
-canvH = circOutR * 2;
-canvW = circOutR * 2;
-circAngleOffset = 10;
-winSize = f'{canvW * 2}x{canvH * 2}';
-winTrans = 0.2;
+myFont = "Comic Sans MS Bold"; # title font
+padding = 10; # general padding
+circOutR = 240; # outer radius of canvas circle
+circInR = 80; # inner radius of canvas circle cutout
+canvH = circOutR * 2; # height of canvas
+canvW = circOutR * 2; # width of canvas
+circAngleOffset = 10; # gap between each polygon in the canvas circle
+bordWidth = 3; # border width of the canvas
+lineWeight = 8; # weight of the polygon outlines
+winSize = f'{(canvW + (padding + bordWidth) * 2) * 2}x{canvH * 2}'; # window size
+winTrans = 0.3; # base transparency of window
+fillCol = "turquoise4"; # fill colour of canvas polygons
+outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
+steps = 5; # general steps to increment
 
 # helper funkies
 def drawWin():
     # drawing the main window
-    window = widg.Window(themename = "vapor");
+    window = widg.Window();
     window.title("顔ウィール");
     window.geometry(winSize);
     window.minsize(width = 640, height = 640);
@@ -69,14 +74,12 @@ def centreWin(window):
 	window.geometry(f'{winSize}+{displayXOff}+{displayYOff}');
 	return window;
 
-fadeSteps = 5;
-fadeIncr = (1 - winTrans) / fadeSteps;
-
 def fade(isIn: boolean):
-	start = winTrans if isIn else 1;
-	for i in range(fadeSteps):
-		kaoWin.attributes("-alpha", start + (1 if isIn else -1) * (i + 1) * fadeIncr);
-		time.sleep(0.02);
+    fadeIncr = (1 - winTrans) / steps;
+    start = winTrans if isIn else 1;
+    for i in range(steps):
+        kaoWin.attributes("-alpha", start + (1 if isIn else -1) * (i + 1) * fadeIncr);
+        time.sleep(0.02);
 
 # sets values of the types combobox based on the category selected
 def setTypesCombVal(types):
@@ -86,6 +89,51 @@ def setTypesCombVal(types):
 # does something special when a specific polygon is selected
 def polygonAction(polygon):
     print(str(polygon));
+
+# initiates a new circle canvas
+def circleInit(frame):
+    return Canvas(
+        frame,
+        width = canvW + padding * 2,
+        height = canvH + padding * 2,
+        borderwidth = bordWidth,
+        relief = "raised"
+    );
+
+# draws the curved edges of each polygon
+def drawCircCurve(circle, cntr, radius, ang1, ang2):
+    angleDiff = (ang2 - ang1) / steps;
+    curvePoints = list(map(
+        lambda i: (
+            (cntr + radius * cos(ang1 + i * angleDiff)) + padding,
+            circOutR + radius * sin(ang1 + i * angleDiff) + padding
+        ),
+        range(steps + 1)
+    ));
+    circle.create_line(
+        curvePoints,
+        fill = outlineCol,
+        smooth = True,
+        width = lineWeight,
+        tags = ("polygon")
+    );
+
+# draws the straight edges of each polygon
+def drawCircLine(circle, cntr, ang1, ang2):
+    pointPairs = [(circOutR, ang1), (circInR, ang2)];
+    linePoints = list(map(
+        lambda point: (
+            cntr + point[0] * cos(point[1]) + padding,
+            circOutR + point[0] * sin(point[1]) + padding
+        ),
+        pointPairs
+    ));
+    circle.create_line(
+        linePoints,
+        fill = outlineCol,
+        width = lineWeight,
+        tags = ("polygon")
+    );
 
 # draws a bunch of top-truncated triangles in a circle
 def drawCircle(circle, pcs, angleOff, overlayText):
@@ -109,109 +157,23 @@ def drawCircle(circle, pcs, angleOff, overlayText):
             curr + outOff
         ]; # order of the angles for each point
         
-        # calculate the points of the polygon
-        polygonPoints = [];
-        for j in range(4): # 4 points
-            currRad = radii[j > 1]; # cheaty cheaty
-            polygonPoints.append(
-                (
-                    cntr + currRad * cos(order[j]), # x value
-                    radii[0] + currRad * sin(order[j]) # y value
-                )
-            );
+		# out/in curve
+        drawCircCurve(circle, cntr, circOutR, order[0], order[1]);
+        drawCircCurve(circle, cntr, circInR, order[2], order[3]);
         
-		# out curve
-        outCurvePoints = [];
-        angleDiff = (order[1] - order[0]) / fadeSteps;
-        for i in range(fadeSteps + 1):
-            outCurvePoints.append(
-                (
-					(cntr + circOutR * cos(order[0] + i * angleDiff)),
-					radii[0] + circOutR * sin(order[0] + i * angleDiff)
-				)
-            );
-        circle.create_line(
-            outCurvePoints,
-            fill = "LightSteelBlue1",
-			smooth = True,
-            width = 2,
-            tags = ("polygon")
-		);
-
-		# curr side line
-        circle.create_line(
-            [
-                (
-                    cntr + circOutR * cos(order[1]),
-                	radii[0] + circOutR * sin(order[1])
-                ),
-                (
-                    cntr + circInR * cos(order[2]),
-                	radii[0] + circInR * sin(order[2])
-                ),
-            ],
-            fill = "LightSteelBlue1",
-            width = 2,
-            tags = ("polygon")
-		);
-
-		# next side line
-        circle.create_line(
-            [
-                (
-                    cntr + circOutR * cos(order[0]),
-                	radii[0] + circOutR * sin(order[0])
-                ),
-                (
-                    cntr + circInR * cos(order[3]),
-                	radii[0] + circInR * sin(order[3])
-                ),
-            ],
-            fill = "LightSteelBlue1",
-            width = 2,
-            tags = ("polygon")
-		);
-
-		# in curve
-        inCurvePoints = [];
-        angleDiff = (order[3] - order[2]) / fadeSteps;
-        for i in range(fadeSteps + 1):
-            inCurvePoints.append(
-                (
-					(cntr + circInR * cos(order[2] + i * angleDiff)),
-					radii[0] + circInR * sin(order[2] + i * angleDiff)
-				)
-            );
-        circle.create_line(
-            inCurvePoints,
-            fill = "LightSteelBlue1",
-			smooth = True,
-            width = 2,
-            tags = ("polygon")
-		);
+		# curr/next side lines
+        drawCircLine(circle, cntr, order[1], order[2]);
+        drawCircLine(circle, cntr, order[0], order[3]);
         
-        # draw it
-        # specialTag = overlayText[i];
-        # circle.create_polygon(
-        #     polygonPoints,
-        #     fill = "turquoise4",
-        #     outline = "LightSteelBlue1",
-        #     width = 2,
-        #     tags = ("polygon", "hello" + str(i))
-        # );
-        # circle.tag_bind("hello" + str(i), "<Button>", lambda event: polygonAction(i));
-
 	# draw centre circle
     offSpace = sqrt(2 * (circInR ** 2) * (1 - cos(radians(2 * angleOff))));
     cntrCircOff = circInR - offSpace;
+    p1, p2 = cntr - cntrCircOff + padding, cntr + cntrCircOff + padding
     circle.create_oval(
-		[
-            (cntr - cntrCircOff, cntr - cntrCircOff),
-            (cntr + cntrCircOff, cntr + cntrCircOff)
-        ],
-		fill = "turquoise4",
-		outline = "LightSteelBlue1",
-		width = 2,
+		[(p1, p1), (p2, p2)],
+		fill = fillCol,
+		outline = outlineCol,
+		width = lineWeight,
 		tags = ("centre")
     );
 
@@ -229,10 +191,10 @@ def packTopFrame():
 
 # middle
 def packMiddleFrame():
-	middleFrame.pack(pady = padding);
-	cateFrame.pack(padx = padding, side = "left");
+	middleFrame.pack(pady = padding, fill = BOTH, expand = True);
+	cateFrame.pack(side = "left");
 	cateCircle.pack(pady = padding); catComB.pack(pady = padding);
-	typeFrame.pack(padx = padding, side = "left");
+	typeFrame.pack(side = "left");
 	typeCircle.pack(pady = padding); typesComB.pack(pady = padding);
 
 def packBottomFrame():
@@ -297,8 +259,8 @@ cateFrame = Frame(middleFrame, bg = "#add123");
 typeFrame = Frame(middleFrame, bg = "#add123");
 
 # circles
-cateCircle = Canvas(cateFrame, width = canvW, height = canvH, borderwidth = 3, relief = "raised");
-typeCircle = Canvas(typeFrame, width = canvW, height = canvH, borderwidth = 3, relief = "raised");
+cateCircle = circleInit(cateFrame);
+typeCircle = circleInit(typeFrame);
 
 # C-C-C-C-COMBOOOBOOOOOOX
 inCate = StringVar(value = "");
