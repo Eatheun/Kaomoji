@@ -1,3 +1,4 @@
+from gc import disable
 from xmlrpc.client import boolean
 import pyautogui as pag
 import time
@@ -49,6 +50,7 @@ winSize = f'{(canvW + (padding + bordWidth) * 2) * 2}x{canvH * 2}'; # window siz
 winTrans = 0.3; # base transparency of window
 fillCol = "turquoise4"; # fill colour of canvas polygons
 outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
+transCol = "#add123"; # transparent colour lol
 steps = 5; # general steps to increment
 
 # helper funkies
@@ -64,8 +66,8 @@ def drawWin():
     # changing attributes
     window.attributes("-alpha", winTrans);
     window.attributes("-topmost", True);
-    window.config(bg = "#add123");
-    window.wm_attributes("-transparentcolor", "#add123");
+    window.config(bg = transCol);
+    window.wm_attributes("-transparentcolor", transCol);
     return window;
 
 def centreWin(window):
@@ -181,7 +183,7 @@ def setDrawCircle(circle, pcs, angleOff, overlayText):
 # packing helpers
 # top
 def packTopFrame():
-	topFrame.pack(pady = padding);
+	topFrame.pack();
 	closeButt.pack(side = "left");
 	titleLabel.pack(side = "left");
 
@@ -228,9 +230,9 @@ kaoWin = centreWin(kaoWin);
 ################################ FRAMES ################################
 
 # framing
-topFrame = Frame(kaoWin, bg = "#add123"); bindHover(topFrame);
-middleFrame = Frame(kaoWin, bg = "#add123"); bindHover(middleFrame);
-bottomFrame = Frame(kaoWin, bg = "#add123"); bindHover(bottomFrame);
+topFrame = Frame(kaoWin, bg = transCol); bindHover(topFrame);
+middleFrame = Frame(kaoWin, bg = transCol); bindHover(middleFrame);
+bottomFrame = Frame(kaoWin, bg = transCol); bindHover(bottomFrame);
 
 ################################ CLOSE BUTTON ################################
 
@@ -251,8 +253,8 @@ titleLabel.bind('<B1-Motion>', dragging);
 ################################ CIRCLES + COMBOBOX ################################
 
 # frames for the circles and the comboboxs
-cateFrame = Frame(middleFrame, bg = "#add123");
-typeFrame = Frame(middleFrame, bg = "#add123");
+cateFrame = Frame(middleFrame, background = "");
+typeFrame = Frame(middleFrame, background = "");
 
 # circles
 cateCircle = circleInit(cateFrame);
