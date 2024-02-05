@@ -1,3 +1,4 @@
+import pyautogui as pag
 import time
 import random
 import pyperclip as clpbrd
@@ -40,11 +41,14 @@ fillCol = "turquoise4"; # fill colour of canvas polygons
 outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
 transCol = "#add123"; # transparent colour lol
 
+x, y = pag.size();
+print(f'{x, y, pag.size()[1]}')
+
 # canvas metrics
-circOutR = 160; # outer radius of canvas circle
-circInR = 50; # inner radius of canvas circle cutout
+circOutR = int(min(320, pag.size()[1] / 4.5)); # outer radius of canvas circle, limited by screen res
+circInR = int(min(80, circOutR / 2)); # inner radius of canvas circle cutout, limited by circOutR
 c = circOutR; # centre of circle
-circAngleOffset = 10; # gap between each polygon in the canvas circle
+circAngleOffset = 6; # gap between each polygon in the canvas circle
 
 # tkinter
 bordWidth = 3; # border width of the canvas
@@ -56,7 +60,7 @@ steps = 5; # general steps to increment
 padding = 10; # general padding
 canvH = circOutR * 2; # height of canvas
 canvW = circOutR * 2; # width of canvas
-winSize = f'{(canvW + (padding + bordWidth) * 2) * 2}x{canvH + 240}'; # window size
+winSize = f'{(canvW + (padding + bordWidth) * 2) * 2}x{canvH + 216}'; # window size
 
 # Helper functions
 lastClickX = 0;
@@ -320,7 +324,7 @@ class Circle(Canvas):
             self.create_text(
                 c + midRad * cos(midAng) + padding,
                 circOutR + midRad * sin(midAng) + padding,
-                font = (myFont, 10),
+                font = (myFont, floor((4 / pcs) * 18)), # scale the font down, 0 - 90 degrees
                 text = tag,
                 tag = ("polygon")
             );
