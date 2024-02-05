@@ -48,7 +48,7 @@ circAngleOffset = 10; # gap between each polygon in the canvas circle
 
 # tkinter
 bordWidth = 3; # border width of the canvas
-lineWeight = 8; # weight of the polygon outlines
+lineWeight = 6; # weight of the polygon outlines
 winTrans = 0.3; # base transparency of window
 steps = 5; # general steps to increment
 
@@ -79,12 +79,22 @@ def fade(isIn, window):
         window.attributes("-alpha", start + (1 if isIn else -1) * (i + 1) * fadeIncr);
         time.sleep(0.02);
 
+def polygonDoSomething(event):
+    x = event.x - c - padding;
+    y = event.y - circOutR - padding;
+    dist = sqrt((x ** 2) + (y ** 2));
+    if circInR <= dist and dist <= circOutR:
+        print(f'{(x, y)}');
+
 ################################ MAIN WINDOW ################################
 
 # widgets and stuff
 class KaoApp(Tk):
     def __init__(self):
         super().__init__();
+
+        global publicWindow;
+        publicWindow = self;
         
         self.drawWinInfo();
         self.assignWinAttr();
@@ -94,7 +104,7 @@ class KaoApp(Tk):
         self.topFrame = TopSection(self);
         top = self.topFrame;
         top.closeButton.assignQuit(self);
-        top.title.assignDragWin(self);
+        top.title.bindDragWin();
         
         # middle
         self.inCate = StringVar(value = "");
@@ -131,7 +141,7 @@ class KaoApp(Tk):
 
 class Section(Frame):
     def __init__(self, master):
-        super().__init__(master, background = transCol);
+        super().__init__(master);
         self.pack(pady = padding);
         
         self.bindHover(master);
@@ -162,11 +172,9 @@ class Title(Label):
     def __init__(self, master, txt = "Select a Kaomoji:", font = (myFont, 18)):
         super().__init__(master, text = txt, font = font);
         self.pack(side = "left");
-    
+
     # assigns dragging to the window
-    def assignDragWin(self, window):
-        global publicWindow;
-        publicWindow = window;
+    def bindDragWin(self):
         self.bind('<Button-1>', saveLastClickPos);
         self.bind('<B1-Motion>', dragging);
 
@@ -180,7 +188,7 @@ class MiddleSection(Section):
         # draws the initial frames and the category circle
         self.cateFrame = CateFrame(self);
         self.typeFrame = TypeFrame(self);
-        self.cateFrame.cateCirc.drawCircle(len((list(all.keys()))), circAngleOffset);
+        self.cateFrame.cateCirc.drawCircle(len((list(all.keys()))), circAngleOffset, list(all.keys()));
         self.bindDrawCircle();
     
     # sets values of the types combobox based on the category selected
@@ -201,7 +209,8 @@ class MiddleSection(Section):
             ),
             lambda event: typeCircRef.drawCircle(
                 len(typeCombRef["values"]),
-                circAngleOffset
+                circAngleOffset,
+                typeCombRef["values"]
             )
         ];
         for event in events:
@@ -276,7 +285,7 @@ class Circle(Canvas):
         );
 
     # draws a bunch of top-truncated triangles in a circle
-    def drawCircle(self, pcs, angleOff):
+    def drawCircle(self, pcs, angleOff, values):
         if pcs == 0: return;
         self.delete("polygon"); # clears all the circles before
         
@@ -303,6 +312,18 @@ class Circle(Canvas):
             # curr/next side lines
             self.drawCircLine(order[1], order[2]);
             self.drawCircLine(order[0], order[3]);
+
+            # overlaying current value as text
+            midRad = (circOutR + circInR) / 2;
+            midAng = (curr + next) / 2;
+            tag = values[i].replace(" ", "\n");
+            self.create_text(
+                c + midRad * cos(midAng) + padding,
+                circOutR + midRad * sin(midAng) + padding,
+                font = (myFont, 10),
+                text = tag,
+                tag = ("polygon")
+            );
             
         # draw centre self
         offSpace = sqrt(2 * (circInR ** 2) * (1 - cos(radians(2 * angleOff))));
@@ -318,7 +339,7 @@ class Circle(Canvas):
 
     # experimental binding
     def bindClickCanvas(self):
-        self.bind("<Button>", lambda event: print(f'{event.x, event.y}'));
+        self.bind("<Button>", lambda event: polygonDoSomething(event));
 
 class Combo(widg.Combobox):
     def __init__(self, master):
