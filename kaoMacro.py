@@ -1,15 +1,12 @@
-from gc import disable
-from xmlrpc.client import boolean
-import pyautogui as pag
 import time
 import random
-import win32api as wapi, win32con as wcon
 import pyperclip as clpbrd
 from kaoCat import *
 from tkinter import *
 import ttkbootstrap as widg
 import numpy as np
 from math import *
+import win32api as wapi, win32con as wcon
 
 ################################ STAGE 3 ################################
 
@@ -61,9 +58,9 @@ def drawWin():
     window.geometry(winSize);
     window.minsize(width = 640, height = 640);
     window.iconbitmap("icon.ico");
-    window.overrideredirect(True);
     
     # changing attributes
+    window.overrideredirect(True);
     window.attributes("-alpha", winTrans);
     window.attributes("-topmost", True);
     window.config(bg = transCol);
@@ -76,7 +73,7 @@ def centreWin(window):
 	window.geometry(f'{winSize}+{displayXOff}+{displayYOff}');
 	return window;
 
-def fade(isIn: boolean):
+def fade(isIn):
     fadeIncr = (1 - winTrans) / steps;
     start = winTrans if isIn else 1;
     for i in range(steps):
@@ -134,7 +131,7 @@ def drawCircLine(circle, cntr, ang1, ang2):
     );
 
 # draws a bunch of top-truncated triangles in a circle
-def drawCircle(circle, pcs, angleOff, overlayText):
+def drawCircle(circle, pcs, angleOff):
     if pcs == 0: return;
     
     # basic metrics
@@ -176,9 +173,9 @@ def drawCircle(circle, pcs, angleOff, overlayText):
     );
 
 # clears and draws near circles
-def setDrawCircle(circle, pcs, angleOff, overlayText):
+def setDrawCircle(circle, pcs, angleOff):
     circle.delete("polygon");
-    drawCircle(circle, pcs, angleOff, overlayText);
+    drawCircle(circle, pcs, angleOff);
 
 # packing helpers
 # top
@@ -289,8 +286,7 @@ events = [
     lambda event: setDrawCircle(
         typeCircle,
         len(typesComB["values"]),
-        circAngleOffset,
-        typesComB["values"]
+        circAngleOffset
     )
 ];
 for event in events:
@@ -318,8 +314,7 @@ packBottomFrame();
 setDrawCircle(
     cateCircle,
     len(catComB["values"]),
-    circAngleOffset,
-    list(all.keys())
+    circAngleOffset
 );
 
 # run Forest run
