@@ -311,5 +311,14 @@ class EnterButton(Button):
     def __init__(self, master):
         super().__init__(master, text = "Enter");
         self.pack();
+
+        self.bindCopyKaomoji();
+    
+    def bindCopyKaomoji(self):
+        for action in ["<Button>", "<KeyPress-Return>"]: self.bind(
+            sequence = action,
+            func = lambda event: copyKaoClpbrd(inCate.get(), inType.get())
+        );
     
 kaoWin = KaoApp();
+kaoWin.middleFrame.cateFrame.circle.setDrawCircle(len(list(all.keys())), circAngleOffset);
