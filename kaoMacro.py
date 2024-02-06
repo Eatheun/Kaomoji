@@ -91,17 +91,21 @@ def calcCircXY(r, a):
         outR + r * sin(a) + pad # Y
     );
 
-def polygonDoSomething(event):
-    x = event.x - c - pad;
-    y = event.y - outR - pad;
-    dist = sqrt((x ** 2) + (y ** 2));
-    if inR <= dist and dist <= outR:
-        print(f'{(x, y)}');
-
 # binds window hovering to the section
 def bindHover(widget):
     widget.bind("<Enter>", lambda event: fade(True, publicWindow));
     widget.bind("<Leave>", lambda event: fade(False, publicWindow));
+
+# now we make the circles do something
+def polygonDoSomething(event, circle):
+    x = event.x - c - pad;
+    y = event.y - outR - pad;
+    auxAng = 180 if x > 0 else 0;
+    dist = sqrt((x ** 2) + (y ** 2));
+    if inR <= dist and dist <= outR:
+        theta = (90 if x == 0 else degrees(atan(y / x))) + 90 + auxAng;
+        index = floor(theta * circle.pcs / 360);
+        print(f'{circle.values[index]}');
 
 ################################ MAIN WINDOW ################################
 
@@ -179,7 +183,6 @@ class TopSection(Section):
 class CloseButton(Button):
     def __init__(self, master):
         super().__init__(master, font = (myFont, 12), text = "X", fg = outlineCol, bg = fillCol);
-        print("self");
         self.pack(side = "left");
 
     # assigns window closure
@@ -295,7 +298,10 @@ class Circle(Canvas):
         if pcs == 0: return;
         self.delete("polygon", "centre"); # clears all the circles before
         
-        # offset metrics
+        # offset metrics, making some of them locally accessible
+        self.pcs = pcs;
+        self.angleOff = angleOff;
+        self.values = values;
         inOff = radians(min(angleOff, 180 / pcs));
         outOff = atan((inR / outR) * (tan(inOff)));
         
@@ -317,17 +323,12 @@ class Circle(Canvas):
             midRad = (outR + inR) / 2;
             midAng = (curr + next) / 2;
             tag = values[i].replace(" ", "\n");
-            newButt = Button(
-                publicWindow,
-                font = (myFont, floor((4 / pcs) * baseFontSize)),
-                text = tag,
-                fg = "#000000",
-                bg = "#fffff0"
-            );
-            self.create_window(
+            self.create_text(
                 calcCircXY(midRad, midAng),
                 anchor = CENTER,
-                window = newButt,
+                font = (myFont, floor((4 / pcs) * baseFontSize)),
+                fill = outlineCol,
+                text = tag,
                 tags = ("polygon")
             );
 
@@ -358,7 +359,7 @@ class Circle(Canvas):
 
     # experimental binding
     def bindClickCanvas(self):
-        self.bind("<Button>", lambda event: polygonDoSomething(event));
+        self.bind("<Button>", lambda event: polygonDoSomething(event, self));
 
 class Combo(widg.Combobox):
     def __init__(self, master):
