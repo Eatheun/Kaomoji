@@ -290,7 +290,7 @@ class Circle(Canvas):
 			tags = ("polygon")
         );
 
-    # draws a bunch of top-truncated triangles in a circle
+    # draws a bunch of pie-sliced annuli in a circle
     def drawCircle(self, pcs, angleOff, values):
         if pcs == 0: return;
         self.delete("polygon", "centre"); # clears all the circles before
@@ -324,7 +324,7 @@ class Circle(Canvas):
                 tag = ("polygon")
             );
             
-        # draw centre self
+        # draw centre with parent directory symbol
         offSpace = sqrt(2 * (inR ** 2) * (1 - cos(radians(2 * angleOff))));
         cCircOff = inR - offSpace;
         p1, p2 = c - cCircOff + pad, c + cCircOff + pad
@@ -335,6 +335,13 @@ class Circle(Canvas):
             width = lineWeight,
             tags = ("centre")
         );
+        self.create_text(
+			c + pad, c + pad,
+			font = (myFont, 18),
+			anchor = "center",
+   			text = "..",
+			tag = ("centre")
+		);
 
     # experimental binding
     def bindClickCanvas(self):
