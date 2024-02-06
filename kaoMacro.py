@@ -35,20 +35,19 @@ def copyKaoClpbrd(category, kaoType):
 ################################ STAGE 4 ################################
 
 #### CONSTANTS ####
-# text
-myFont = "Comic Sans MS Bold"; # title font
-fillCol = "turquoise4"; # fill colour of canvas polygons
-outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
-transCol = "#add123"; # transparent colour lol
-
-x, y = pag.size();
-print(f'{x, y, pag.size()[1]}')
 
 # canvas metrics
 circOutR = int(min(320, pag.size()[1] / 4.5)); # outer radius of canvas circle, limited by screen res
 circInR = int(min(80, circOutR / 2)); # inner radius of canvas circle cutout, limited by circOutR
 c = circOutR; # centre of circle
 circAngleOffset = 6; # gap between each polygon in the canvas circle
+
+# text
+myFont = "Comic Sans MS Bold"; # title font
+fillCol = "turquoise4"; # fill colour of canvas polygons
+outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
+transCol = "#add123"; # transparent colour lol
+baseFontSize = circOutR / 18;
 
 # tkinter
 bordWidth = 3; # border width of the canvas
@@ -253,69 +252,70 @@ class Circle(Canvas):
     
         self.bindClickCanvas();
     
-    # draws the curved edges of each polygon
-    def drawCircCurve(self, r, a1, a2):
-        angleDiff = (a2 - a1) / steps;
-        curvePoints = list(map(
-            lambda i: (
-                (c + r * cos(a1 + i * angleDiff)) + padding,
-                circOutR + r * sin(a1 + i * angleDiff) + padding
-            ),
-            range(steps + 1)
-        ));
-        self.create_line(
-            curvePoints,
-            fill = outlineCol,
-            smooth = True,
-            width = lineWeight,
-            tags = ("polygon")
+    # draw filled polygons
+    def drawPolygon(self, angOrd, radOrd):
+        polyCorners = list(map(
+				lambda i: (
+					c + radOrd[i] * cos(angOrd[i]) + padding,
+                	circOutR + radOrd[i] * sin(angOrd[i]) + padding
+				),
+				range(4)
+            )
         );
-
-    # draws the straight edges of each polygon
-    def drawCircLine(self, a1, a2):
-        pointPairs = [(circOutR, a1), (circInR, a2)];
-        linePoints = list(map(
-            lambda point: (
-                c + point[0] * cos(point[1]) + padding,
-                circOutR + point[0] * sin(point[1]) + padding
-            ),
-            pointPairs
-        ));
-        self.create_line(
-            linePoints,
-            fill = outlineCol,
-            width = lineWeight,
-            tags = ("polygon")
+        
+        polyPoints = [];
+        for i in range(4):
+            polyPoints.append(polyCorners[i]);
+            if i % 2 == 0:
+                angSteps = int(90 / len(angOrd));
+                a0 = angOrd[i]; a1 = angOrd[i + 1];
+                step = (a1 - a0) / angSteps;
+                polyPoints.append(list(map(
+					lambda j: (
+						c + radOrd[i] * cos(a0 + j * step) + padding,
+						circOutR + radOrd[i] * sin(a0 + j * step) + padding
+					),
+					range(angSteps)
+				)));
+        
+        # base fill
+        self.create_polygon(
+			polyPoints,
+			fill = fillCol,
+			width = lineWeight,
+			outline = outlineCol,
+			tags = ("polygon")
         );
 
     # draws a bunch of top-truncated triangles in a circle
     def drawCircle(self, pcs, angleOff, values):
         if pcs == 0: return;
-        self.delete("polygon"); # clears all the circles before
+        self.delete("polygon", "centre"); # clears all the circles before
         
         # basic metrics
-        outOff = radians(min(angleOff, 180 / pcs));
-        inOff = atan((circInR / circOutR) * (tan(outOff)));
+        inOff = radians(min(angleOff, 180 / pcs));
+        outOff = atan((circInR / circOutR) * (tan(inOff)));
         
         # loop through angles as cosi + isini
         angles = np.linspace(90, 450, pcs + 1);
         for i in range(pcs):
             curr = radians(angles[i]);
-            next = radians(angles[i] + 360 / pcs);
-            order = [
-                curr + inOff,
-                next - inOff,
+            next = curr + radians(360 / pcs);
+            angOrd = [
+                curr + outOff,
                 next - outOff,
-                curr + outOff
+                next - inOff,
+                curr + inOff
             ]; # order of the angles for each point
+            radOrd = [
+				circOutR,
+				circOutR,
+				circInR,
+				circInR,
+			]; # order of the radii for the corresponding angles
             
-            # out/in curve
-            self.drawCircCurve(circOutR, order[0], order[1]);
-            self.drawCircCurve(circInR, order[2], order[3]);
-            
-            # curr/next side lines
-            self.drawCircLine(order[1], order[2]);
-            self.drawCircLine(order[0], order[3]);
+            # draw fill first
+            self.drawPolygon(angOrd, radOrd);
 
             # overlaying current value as text
             midRad = (circOutR + circInR) / 2;
@@ -324,7 +324,7 @@ class Circle(Canvas):
             self.create_text(
                 c + midRad * cos(midAng) + padding,
                 circOutR + midRad * sin(midAng) + padding,
-                font = (myFont, floor((4 / pcs) * 18)), # scale the font down, 0 - 90 degrees
+                font = (myFont, floor((4 / pcs) * baseFontSize)), # scale the font down, 0 - 90 degrees
                 text = tag,
                 tag = ("polygon")
             );
