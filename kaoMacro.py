@@ -1,7 +1,9 @@
+from textwrap import fill
 import pyautogui as pag
 import time
 import random
 import pyperclip as clpbrd
+from pyscreeze import center
 from kaoCat import *
 from tkinter import *
 import ttkbootstrap as widg
@@ -44,7 +46,7 @@ circAngOff = 5; # gap between each polygon in the canvas circle
 myFont = "Comic Sans MS Bold"; # title font
 fillCol = "turquoise4"; # fill colour of canvas polygons
 outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
-transCol = "#add123"; # transparent colour lol
+transCol = "#ffffff"; # transparent colour lol
 baseFontSize = outR / 18;
 
 # tkinter
@@ -57,7 +59,7 @@ steps = 5; # general steps to increment
 pad = 10; # general padding
 canvH = outR * 2; # height of canvas
 canvW = outR * 2; # width of canvas
-winSize = f'{(canvW + (pad + bordWidth) * 2) * 2}x{canvH + 216}'; # window size
+winSize = f'{(canvW + (pad + bordWidth) * 2) * 2}x{canvH + 240}'; # window size
 
 #### GLOBAL VARIABLES ####
 
@@ -96,6 +98,11 @@ def polygonDoSomething(event):
     if inR <= dist and dist <= outR:
         print(f'{(x, y)}');
 
+# binds window hovering to the section
+def bindHover(widget):
+    widget.bind("<Enter>", lambda event: fade(True, publicWindow));
+    widget.bind("<Leave>", lambda event: fade(False, publicWindow));
+
 ################################ MAIN WINDOW ################################
 
 # widgets and stuff
@@ -113,15 +120,15 @@ class KaoApp(Tk):
         # top
         self.topFrame = TopSection(self);
         top = self.topFrame;
-        top.bindHover(self);
+        bindHover(top);
         
         top.closeButton.assignQuit(self);
-        top.title.bindDragWin();
+        top.closeButton.bindDragWin();
         
         # middle
         self.middleFrame = MiddleSection(self);
         middle = self.middleFrame;
-        middle.bindHover(self);
+        bindHover(middle);
         
         self.inCate = StringVar(value = "");
         self.inType = StringVar(value = "");
@@ -131,7 +138,7 @@ class KaoApp(Tk):
         # bottom
         self.bottomFrame = BottomSection(self);
         bottom = self.bottomFrame;
-        bottom.bindHover(self);
+        bindHover(bottom);
         
         self.mainloop();
     
@@ -140,13 +147,15 @@ class KaoApp(Tk):
         self.title("顔ウィール");
         self.minsize(width = 640, height = 480);
         self.geometry(winSize);
+        self.iconbitmap("icon.ico");
     
     # assigns window attributes
     def assignWinAttr(self):
         self.overrideredirect(True);
         self.attributes("-alpha", winTrans);
+        self.attributes("-transparentcolor", transCol);
+        self.attributes("-topmost", True);
         self.config(bg = transCol);
-        self.wm_attributes("-transparentcolor", transCol);
         
     # centres window on the screen
     def centreWin(self):
@@ -158,11 +167,6 @@ class Section(Frame):
     def __init__(self, master):
         super().__init__(master);
         self.pack(pady = pad);
-        
-    # binds window hovering to the section
-    def bindHover(self, window):
-        self.bind("<Enter>", lambda event: fade(True, window));
-        self.bind("<Leave>", lambda event: fade(False, window));
 
 ################################ TOP ################################
 
@@ -171,20 +175,16 @@ class TopSection(Section):
         super().__init__(master);
         
         self.closeButton = CloseButton(self);
-        self.title = Title(self);
 
 class CloseButton(Button):
     def __init__(self, master):
-        super().__init__(master, text = "X");
+        super().__init__(master, font = (myFont, 12), text = "X", fg = outlineCol, bg = fillCol);
+        print("self");
         self.pack(side = "left");
 
+    # assigns window closure
     def assignQuit(self, window):
         self.config(command = lambda: window.quit());
-
-class Title(Label):
-    def __init__(self, master, txt = "Select a Kaomoji:", font = (myFont, 18)):
-        super().__init__(master, text = txt, font = font);
-        self.pack(side = "left");
 
     # assigns dragging to the window
     def bindDragWin(self):
@@ -236,7 +236,7 @@ class SubCircleSection(Frame):
 
 class CateFrame(SubCircleSection):
     def __init__(self, master):
-        super().__init__(master);
+        super().__init__(master, bkg = transCol);
         
         self.createCateCircComb();
 
@@ -256,8 +256,8 @@ class TypeFrame(SubCircleSection):
         self.typeComb = Combo(self);
 
 class Circle(Canvas):
-    def __init__(self, master, w = canvW + pad * 2, h = canvH + pad * 2, bdw = bordWidth, rlf = "raised"):
-        super().__init__(master, width = w, height = h, borderwidth = bdw, relief = rlf);
+    def __init__(self, master, w = canvW + pad * 2, h = canvH + pad * 2):
+        super().__init__(master, width = w, height = h);
         self.pack(pady = pad);
     
         self.bindClickCanvas();
@@ -313,21 +313,28 @@ class Circle(Canvas):
             # draw fill first
             self.drawPolygon(angOrd, radOrd);
 
-            # overlaying current value as text
+            # # overlaying current value as text
             midRad = (outR + inR) / 2;
             midAng = (curr + next) / 2;
             tag = values[i].replace(" ", "\n");
-            self.create_text(
-                calcCircXY(midRad, midAng),
-                font = (myFont, floor((4 / pcs) * baseFontSize)), # scale the font down, 0 - 90 degrees
+            newButt = Button(
+                publicWindow,
+                font = (myFont, floor((4 / pcs) * baseFontSize)),
                 text = tag,
-                tag = ("polygon")
+                fg = "#000000",
+                bg = "#fffff0"
             );
-            
-        # draw centre with parent directory symbol
+            self.create_window(
+                calcCircXY(midRad, midAng),
+                anchor = CENTER,
+                window = newButt,
+                tags = ("polygon")
+            );
+
+        # draw centre
         offSpace = sqrt(2 * (inR ** 2) * (1 - cos(radians(2 * angleOff))));
         cCircOff = inR - offSpace;
-        p1, p2 = c - cCircOff + pad, c + cCircOff + pad
+        p1, p2 = c - cCircOff + pad, c + cCircOff + pad;
         self.create_oval(
             [(p1, p1), (p2, p2)],
             fill = fillCol,
@@ -335,13 +342,19 @@ class Circle(Canvas):
             width = lineWeight,
             tags = ("centre")
         );
-        self.create_text(
-			c + pad, c + pad,
-			font = (myFont, 18),
-			anchor = "center",
-   			text = "..",
-			tag = ("centre")
-		);
+        newButt = Button(
+            publicWindow,
+            font = (myFont, 18),
+            text = "X",
+            fg = "#000000",
+            bg = "#fffff0"
+        );
+        self.create_window(
+            c + pad, c + pad,
+            anchor = CENTER,
+            window = newButt,
+            tags = ("polygon")
+        );
 
     # experimental binding
     def bindClickCanvas(self):
@@ -369,7 +382,7 @@ class BottomSection(Section):
 
 class EnterButton(Button):
     def __init__(self, master):
-        super().__init__(master, text = "Enter");
+        super().__init__(master, font = (myFont, 12), text = "Enter");
         self.pack();
 
         self.bindCopyKaomoji();
