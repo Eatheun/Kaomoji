@@ -5,27 +5,6 @@ from build.constants.constants import *
 from build.helpers.circle import *
 from build.setup.kaoCat import *
 
-################################ STAGE 3 ################################
-
-# Gets a random Kaomoji from all[category][kaoType] and copies it to the clipboard
-def copyKaoClpbrd(category, kaoType):
-    # check before
-    if not category in all or not kaoType in all[category]: return;
-    kaoNum = all[category][kaoType];
-    
-    # concatenating the giant relative path
-    filepath = "./All Kaomojis" + "/" + category + "/" + kaoType + ".txt";
-    with open(filepath, "r", encoding = "utf-8") as kaoFile:
-        # find the Kaomoji, copy to clipboard, print for debugging
-        kaomoji = "";
-        for i in range(random.randrange(kaoNum)): kaomoji = kaoFile.readline();
-        kaomoji = kaomoji.removesuffix("\n");
-        clpbrd.copy(kaomoji);
-        print(kaomoji);
-        
-        # retry if we somehow found a blank
-        if kaomoji == "": copyKaoClpbrd(category, kaoType);
-
 ################################ STAGE 4 ################################
 
 #### GLOBAL VARIABLES ####
