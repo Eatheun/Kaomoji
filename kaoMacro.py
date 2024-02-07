@@ -1,6 +1,5 @@
 import time
 from tkinter import *
-import numpy as np
 from math import *
 from build.constants.constants import *
 from build.helpers.circle import *
