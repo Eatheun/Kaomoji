@@ -46,7 +46,7 @@ circAngOff = 5; # gap between each polygon in the canvas circle
 myFont = "Comic Sans MS Bold"; # title font
 fillCol = "turquoise4"; # fill colour of canvas polygons
 outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
-transCol = "#ffffff"; # transparent colour lol
+transCol = "#f0f0f0"; # transparent colour lol
 baseFontSize = outR / 18;
 
 # tkinter
@@ -59,7 +59,9 @@ steps = 5; # general steps to increment
 pad = 10; # general padding
 canvH = outR * 2; # height of canvas
 canvW = outR * 2; # width of canvas
-winSize = f'{(canvW + (pad + bordWidth) * 2) * 2}x{canvH + 240}'; # window size
+winW = (canvW + pad * 2) * 2 # width of window
+winH = canvH + 136 # width of window
+winSize = f'{winW}x{winH}'; # window size
 
 #### GLOBAL VARIABLES ####
 
@@ -78,6 +80,7 @@ def dragging(event):
 	y = event.y - lastClickY + publicWindow.winfo_y();
 	publicWindow.geometry("+%s+%s" % (x , y));
 
+# fades window in/out
 def fade(isIn, window):
     fadeIncr = (1 - winTrans) / steps;
     start = winTrans if isIn else 1;
@@ -85,27 +88,50 @@ def fade(isIn, window):
         window.attributes("-alpha", start + (1 if isIn else -1) * (i + 1) * fadeIncr);
         time.sleep(0.02);
 
+# binds window hovering to the section
+def bindHover(widget):
+    widget.bind("<Enter>", lambda event: fade(True, publicWindow));
+    widget.bind("<Leave>", lambda event: fade(False, publicWindow));
+
+# calculates circle coordinates
 def calcCircXY(r, a):
     return (
         c + r * cos(a) + pad, # X
         outR + r * sin(a) + pad # Y
     );
 
-# binds window hovering to the section
-def bindHover(widget):
-    widget.bind("<Enter>", lambda event: fade(True, publicWindow));
-    widget.bind("<Leave>", lambda event: fade(False, publicWindow));
+# now we make the circles do something, 0 for categories, 1 for types
+currCircFrame = 0;
+vals = ["", ""];
+currList = list(all.keys());
 
-# now we make the circles do something
-def polygonDoSomething(event, circle):
+# selects category/kaoType if warranted
+def selectVal(x, y, circle):
+    global currCircFrame, vals, currList;
+    auxAng = 180 if x > 0 else 0; # translating angles of any magnitude
+    invX = 90 if y < 0 else 270; # factors in invalid X values
+    theta = (invX if x == 0 else degrees(atan(y / x))) + 90 + auxAng;
+    index = floor(theta * circle.pcs / 360);
+    
+    # set the values and change the frame
+    vals[currCircFrame] = circle.values[index];
+    if currCircFrame == 0:
+        currList = list(all[vals[0]].keys());
+    else:
+        currList = list(all.keys());
+        copyKaoClpbrd(vals[0], vals[1]);
+    circle.drawCircle(len(currList), circAngOff, currList);
+    currCircFrame += 1; currCircFrame %= 2;
+
+# checks if we clicked on the circle
+def interactCircle(event, circle, cCircOff):
     x = event.x - c - pad;
     y = event.y - outR - pad;
-    auxAng = 180 if x > 0 else 0;
     dist = sqrt((x ** 2) + (y ** 2));
     if inR <= dist and dist <= outR:
-        theta = (90 if x == 0 else degrees(atan(y / x))) + 90 + auxAng;
-        index = floor(theta * circle.pcs / 360);
-        print(f'{circle.values[index]}');
+        selectVal(x, y, circle); # selects the value
+    elif 0 <= dist and dist <= cCircOff:
+        publicWindow.quit(); # quits if we selected the centre
 
 ################################ MAIN WINDOW ################################
 
@@ -126,23 +152,12 @@ class KaoApp(Tk):
         top = self.topFrame;
         bindHover(top);
         
-        top.closeButton.assignQuit(self);
-        top.closeButton.bindDragWin();
+        top.dragButton.bindDragWin();
         
         # middle
         self.middleFrame = MiddleSection(self);
         middle = self.middleFrame;
         bindHover(middle);
-        
-        self.inCate = StringVar(value = "");
-        self.inType = StringVar(value = "");
-        middle.cateFrame.cateComb.assignStrVar(self.inCate);
-        middle.typeFrame.typeComb.assignStrVar(self.inType);
-        
-        # bottom
-        self.bottomFrame = BottomSection(self);
-        bottom = self.bottomFrame;
-        bindHover(bottom);
         
         self.mainloop();
     
@@ -163,8 +178,8 @@ class KaoApp(Tk):
         
     # centres window on the screen
     def centreWin(self):
-        displayXOff = int(self.winfo_screenwidth() / 2 - canvW);
-        displayYOff = int(self.winfo_screenheight() / 2 - canvH);
+        displayXOff = int((self.winfo_screenwidth() - winW) / 2);
+        displayYOff = int((self.winfo_screenheight() - winH) / 2);
         self.geometry(f'{winSize}+{displayXOff}+{displayYOff}');
 
 class Section(Frame):
@@ -178,17 +193,13 @@ class TopSection(Section):
     def __init__(self, master):
         super().__init__(master);
         
-        self.closeButton = CloseButton(self);
+        self.dragButton = DragButton(self);
 
-class CloseButton(Button):
+class DragButton(Button):
     def __init__(self, master):
-        super().__init__(master, font = (myFont, 12), text = "X", fg = outlineCol, bg = fillCol);
+        super().__init__(master, font = (myFont, 12), text = "+", fg = outlineCol, bg = fillCol, activebackground = "#ffffff");
         self.pack(side = "left");
-
-    # assigns window closure
-    def assignQuit(self, window):
-        self.config(command = lambda: window.quit());
-
+    
     # assigns dragging to the window
     def bindDragWin(self):
         self.bind('<Button-1>', saveLastClickPos);
@@ -201,77 +212,30 @@ class MiddleSection(Section):
         super().__init__(master);
         self.pack(pady = pad);
         
-        # draws the initial frames and the category circle
-        self.cateFrame = CateFrame(self);
-        self.typeFrame = TypeFrame(self);
-        self.cateFrame.cateCirc.drawCircle(len((list(all.keys()))), circAngOff, list(all.keys()));
-        self.bindDrawCircle();
-    
+        self.circFrame = SubCircleSection(self, bg = transCol);
+        self.circFrame.circle.drawCircle(len(currList), circAngOff, currList);
+        
     # sets values of the types combobox based on the category selected
     def setTypesCombVal(self, types):
         self.typeFrame.typeComb.config(values = types);
         publicWindow.inType.set("");
 
-    # whenever we select a category, we will:
-    #   1. set the selectable values for the types combobox
-    #   2. redraw the circle for said types combobox
-    def bindDrawCircle(self):
-        typeCircRef = self.typeFrame.typeCirc;
-        typeCombRef = self.typeFrame.typeComb;
-        cateCombRef = self.cateFrame.cateComb;
-        events = [
-            lambda event: self.setTypesCombVal(
-                list(all[publicWindow.inCate.get()].keys())
-            ),
-            lambda event: typeCircRef.drawCircle(
-                len(typeCombRef["values"]),
-                circAngOff,
-                typeCombRef["values"]
-            )
-        ];
-        for event in events:
-            cateCombRef.bind("<<ComboboxSelected>>", event, add = "+");
-
 class SubCircleSection(Frame):
-    def __init__(self, master, bkg = transCol):
-        super().__init__(master, background = bkg);
+    def __init__(self, master, bg):
+        super().__init__(master);
+        self.config(bg = bg);
         self.pack(side = "left");
 
-class CateFrame(SubCircleSection):
-    def __init__(self, master):
-        super().__init__(master, bkg = transCol);
-        
-        self.createCateCircComb();
-
-    def createCateCircComb(self):
-        self.cateCirc = Circle(self);
-        self.cateComb = Combo(self);
-        self.cateComb.config(values = list(all.keys()));
-
-class TypeFrame(SubCircleSection):
-    def __init__(self, master):
-        super().__init__(master);
-
-        self.createTypeCircComb();
-
-    def createTypeCircComb(self):
-        self.typeCirc = Circle(self);
-        self.typeComb = Combo(self);
+        self.circle = Circle(self);
 
 class Circle(Canvas):
     def __init__(self, master, w = canvW + pad * 2, h = canvH + pad * 2):
         super().__init__(master, width = w, height = h);
         self.pack(pady = pad);
     
-        self.bindClickCanvas();
-    
     # draw filled polygons
     def drawPolygon(self, angOrd, radOrd):
-        polyCorners = list(map(
-            lambda i: calcCircXY(radOrd[i], angOrd[i]),
-            range(4)
-        ));
-        
+        polyCorners = list(map(lambda i: calcCircXY(radOrd[i], angOrd[i]), range(4)));
         polyPoints = [];
         for i in range(4):
             polyPoints.append(polyCorners[i]);
@@ -279,10 +243,7 @@ class Circle(Canvas):
                 angSteps = int(90 / len(angOrd));
                 a0 = angOrd[i]; a1 = angOrd[i + 1];
                 step = (a1 - a0) / angSteps;
-                polyPoints.append(list(map(
-					lambda j: calcCircXY(radOrd[i], a0 + j * step),
-					range(angSteps)
-				)));
+                polyPoints.append(list(map(lambda j: calcCircXY(radOrd[i], a0 + j * step),range(angSteps))));
         
         # base fill
         self.create_polygon(
@@ -343,57 +304,18 @@ class Circle(Canvas):
             width = lineWeight,
             tags = ("centre")
         );
-        newButt = Button(
-            publicWindow,
-            font = (myFont, 18),
-            text = "X",
-            fg = "#000000",
-            bg = "#fffff0"
-        );
-        self.create_window(
+        self.create_text(
             c + pad, c + pad,
             anchor = CENTER,
-            window = newButt,
+            font = (myFont, 18),
+            text = "X",
+            fill = outlineCol,
             tags = ("polygon")
         );
-
-    # experimental binding
-    def bindClickCanvas(self):
-        self.bind("<Button>", lambda event: polygonDoSomething(event, self));
-
-class Combo(widg.Combobox):
-    def __init__(self, master):
-        super().__init__(master, font = (myFont, 8), width = 26, state = "readonly");
-        self.pack(pady = pad);
-
-    # assigns a string variable to the combobox
-    def assignStrVar(self, strVar):
-        self.config(textvariable = strVar);
-
-################################ BOTTOM ################################
-
-class BottomSection(Section):
-    def __init__(self, master):
-        super().__init__(master);
-
-        self.createEnterButton();
-        
-    def createEnterButton(self):
-        self.enterButton = EnterButton(self);
-
-class EnterButton(Button):
-    def __init__(self, master):
-        super().__init__(master, font = (myFont, 12), text = "Enter");
-        self.pack();
-
-        self.bindCopyKaomoji();
+        self.bindInteractCircle(cCircOff);
     
-    # when the enter button is pressed, a Kaomoji will be copied to keyboard
-    def bindCopyKaomoji(self):
-        for action in ["<Button>", "<KeyPress-Return>"]: self.bind(
-            sequence = action,
-            func = lambda event: copyKaoClpbrd(publicWindow.inCate.get(), publicWindow.inType.get()),
-            add = "+"
-        );
-    
+    # binds the circle selecting to the circle
+    def bindInteractCircle(self, cCircOff):
+        self.bind("<Button>", lambda event: interactCircle(event, self, cCircOff));
+
 kaoWin = KaoApp();
