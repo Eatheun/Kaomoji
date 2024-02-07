@@ -1,15 +1,11 @@
-from textwrap import fill
 import pyautogui as pag
 import time
 import random
 import pyperclip as clpbrd
-from pyscreeze import center
 from kaoCat import *
 from tkinter import *
-import ttkbootstrap as widg
 import numpy as np
 from math import *
-import win32api as wapi, win32con as wcon
 
 ################################ STAGE 3 ################################
 
