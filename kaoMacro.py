@@ -1,11 +1,10 @@
-import pyautogui as pag
 import time
-import random
-import pyperclip as clpbrd
-from kaoCat import *
 from tkinter import *
 import numpy as np
 from math import *
+from build.constants.constants import *
+from build.helpers.circle import *
+from build.setup.kaoCat import *
 
 ################################ STAGE 3 ################################
 
@@ -29,35 +28,6 @@ def copyKaoClpbrd(category, kaoType):
         if kaomoji == "": copyKaoClpbrd(category, kaoType);
 
 ################################ STAGE 4 ################################
-
-#### CONSTANTS ####
-
-# canvas metrics
-outR = int(min(360, pag.size()[1] / 3.5)); # outer radius of canvas circle, limited by screen res
-inR = int(min(100, outR / 2)); # inner radius of canvas circle cutout, limited by outR
-c = outR; # centre of circle
-circAngOff = 5; # gap between each polygon in the canvas circle
-
-# text
-myFont = "Comic Sans MS Bold"; # title font
-fillCol = "turquoise4"; # fill colour of canvas polygons
-outlineCol = "LightSteelBlue1"; # outline colour of canvas polygons
-transCol = "#f0f0f0"; # transparent colour lol
-baseFontSize = outR / 18;
-
-# tkinter
-bordWidth = 3; # border width of the canvas
-lineWeight = 6; # weight of the polygon outlines
-winTrans = 0.3; # base transparency of window
-steps = 5; # general steps to increment
-
-# display port metrics
-pad = 10; # general padding
-canvH = outR * 2; # height of canvas
-canvW = outR * 2; # width of canvas
-winW = (canvW + pad * 2) * 2 # width of window
-winH = canvH + 136 # width of window
-winSize = f'{winW}x{winH}'; # window size
 
 #### GLOBAL VARIABLES ####
 
@@ -88,46 +58,6 @@ def fade(isIn):
 def bindHover(widget):
     widget.bind("<Enter>", lambda event: fade(True));
     widget.bind("<Leave>", lambda event: fade(False));
-
-# calculates circle coordinates
-def calcCircXY(r, a):
-    return (
-        c + r * cos(a) + pad, # X
-        outR + r * sin(a) + pad # Y
-    );
-
-# now we make the circles do something, 0 for categories, 1 for types
-currFrame = 0;
-vals = ["", ""];
-currList = list(all.keys());
-
-# selects category/kaoType if warranted
-def selectVal(x, y, circle):
-    global currFrame, vals, currList;
-    auxAng = 180 if x > 0 else 0; # translating angles of any magnitude
-    invX = 90 if y < 0 else 270; # factors in invalid X values
-    theta = (invX if x == 0 else degrees(atan(y / x))) + 90 + auxAng; # calculates theta of mouse
-    index = floor(theta * circle.pcs / 360); # calculates index to the circle's values
-    
-    # set the values and change the frame
-    vals[currFrame] = circle.values[index];
-    if currFrame == 0:
-        currList = list(all[vals[0]].keys());
-    else:
-        currList = list(all.keys());
-        copyKaoClpbrd(vals[0], vals[1]);
-    circle.drawCircle(len(currList), circAngOff, currList);
-    currFrame = (currFrame + 1) % 2;
-
-# checks if we clicked on the circle
-def interactCircle(event, circle, cCircOff):
-    x = event.x - c - pad;
-    y = event.y - outR - pad;
-    dist = sqrt((x ** 2) + (y ** 2));
-    if inR <= dist and dist <= outR:
-        selectVal(x, y, circle); # selects the value
-    elif 0 <= dist and dist <= cCircOff:
-        publicWindow.quit(); # quits if we selected the centre
 
 ################################ MAIN WINDOW ################################
 
@@ -194,88 +124,19 @@ class Circle(Canvas):
     def __init__(self, master, w = canvW + pad * 2, h = canvH + pad * 2):
         super().__init__(master, width = w, height = h);
         self.pack(pady = pad);
-    
-    # draw filled polygons
-    def drawPolygon(self, angOrd, radOrd):
-        polyCorners = list(map(lambda i: calcCircXY(radOrd[i], angOrd[i]), range(4)));
-        polyPoints = [];
-        for i in range(4):
-            polyPoints.append(polyCorners[i]);
-            if i % 2 == 0:
-                angSteps = int(90 / len(angOrd));
-                a0 = angOrd[i]; a1 = angOrd[i + 1];
-                step = (a1 - a0) / angSteps;
-                polyPoints.append(list(map(lambda j: calcCircXY(radOrd[i], a0 + j * step),range(angSteps))));
-        
-        # base fill
-        self.create_polygon(
-			polyPoints,
-			fill = fillCol,
-			width = lineWeight,
-			outline = outlineCol,
-			tags = ("polygon")
-        );
 
     # draws a bunch of pie-sliced annuli in a circle
     def drawCircle(self, pcs, angleOff, values):
         if pcs == 0: return;
         self.delete("polygon", "centre"); # clears all the circles before
         
-        # offset metrics, making some of them locally accessible
+        # make input args locally accessible
         self.pcs = pcs;
         self.angleOff = angleOff;
         self.values = values;
-        inOff = radians(min(angleOff, 180 / pcs));
-        outOff = atan((inR / outR) * (tan(inOff)));
         
-        # loop through angles as cosi + isini
-        angles = np.linspace(90, 450, pcs + 1);
-        for i in range(pcs):
-            # current and next angle of each polygon
-            curr = radians(angles[i]);
-            next = curr + radians(360 / pcs);
-            
-            # order angles and radii for each corresponding point, with offsets
-            angOrd = [curr + outOff, next - outOff, next - inOff, curr + inOff];
-            radOrd = [outR, outR, inR, inR];
-            
-            # draw fill first
-            self.drawPolygon(angOrd, radOrd);
-
-            # # overlaying current value as text
-            midRad = (outR + inR) / 2;
-            midAng = (curr + next) / 2;
-            tag = values[i].replace(" ", "\n");
-            self.create_text(
-                calcCircXY(midRad, midAng),
-                anchor = CENTER,
-                font = (myFont, floor((4 / pcs) * baseFontSize)),
-                fill = outlineCol,
-                text = tag,
-                tags = ("polygon")
-            );
-
-        # draw centre
-        offSpace = sqrt(2 * (inR ** 2) * (1 - cos(radians(2 * angleOff))));
-        cCircOff = inR - offSpace;
-        p1, p2 = c - cCircOff + pad, c + cCircOff + pad;
-        self.create_oval(
-            [(p1, p1), (p2, p2)],
-            fill = fillCol,
-            outline = outlineCol,
-            width = lineWeight,
-            tags = ("centre")
-        );
-        self.create_text(
-            [(c + pad, c + pad)],
-            anchor = CENTER,
-            font = (myFont, 18),
-            text = "X",
-            fill = outlineCol,
-            tags = ("centre")
-        );
-        
-        # binds the circle selecting to the circle
-        self.bind("<Button>", lambda event: interactCircle(event, self, cCircOff));
+        # draw!
+        drawPolygons(self, values);
+        drawCentre(self, publicWindow);
 
 kaoWin = KaoApp();
