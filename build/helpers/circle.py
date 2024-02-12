@@ -76,11 +76,11 @@ def calcPolyPoints(angOrd, radOrd):
     polyPoints = [];
     for i in range(4):
         polyPoints.append(polyCorners[i]);
-        if i % 2 == 0:
-            angSteps = int(90 / len(angOrd));
+        if i % 2 == 0: # for curved areas
+            angSteps = int(45 / len(angOrd));
             a0 = angOrd[i]; a1 = angOrd[i + 1];
             step = (a1 - a0) / angSteps;
-            polyPoints.append(list(map(lambda j: calcCircXY(radOrd[i], a0 + j * step),range(angSteps))));
+            polyPoints.append(list(map(lambda j: calcCircXY(radOrd[i], a0 + j * step), range(angSteps))));
     return polyPoints;
 
 # animation for drawing the polygons
@@ -117,11 +117,11 @@ def drawPolygonAnim(self, window, values, angles, i, currR):
     if currR <= outR:
         window.after(10, drawPolygonAnim, self, window, values, angles, i, currR + self.incrR);
 
-# another wrapper for a "fanning" effect
-def drawPolygonsWrap(self, window, values, angles, i):
+# adds a delay before each polygon animation
+def drawPolygonsFanWrap(self, window, values, angles, i):
     drawPolygonAnim(self, window, values, angles, i, self.incrR + inR);
     if i + 1 < self.pcs:
-        window.after(30, drawPolygonsWrap, self, window, values, angles, i + 1);
+        window.after(30, drawPolygonsFanWrap, self, window, values, angles, i + 1);
 
 # draw filled polygons
 def drawPolygons(self, window, values):
@@ -132,7 +132,7 @@ def drawPolygons(self, window, values):
     # loop through angles as cosi + isini
     angles = np.linspace(90, 450, self.pcs + 1);
     self.incrR = (outR - inR) / (steps << 1);
-    drawPolygonsWrap(self, window, values, angles, 0);
+    drawPolygonsFanWrap(self, window, values, angles, 0);
 
 # animation for drawing centre of circle
 def drawCentreAnim(self, window, currIncr):

@@ -15,7 +15,7 @@ baseFontSize = outR / 18;
 
 # tkinter
 bordWidth = 3; # border width of the canvas
-lineWeight = 6; # weight of the polygon outlines
+lineWeight = 4; # weight of the polygon outlines
 winTrans = 0.3; # base transparency of window
 steps = 5; # general steps to increment
 
@@ -23,6 +23,6 @@ steps = 5; # general steps to increment
 pad = 10; # general padding
 canvH = outR * 2; # height of canvas
 canvW = outR * 2; # width of canvas
-winW = (canvW + pad * 2) * 2 # width of window
+winW = (canvW + pad << 2) * 2; # width of window
 winH = canvH + 136 # width of window
 winSize = f'{winW}x{winH}'; # window size
