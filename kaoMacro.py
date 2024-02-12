@@ -114,7 +114,7 @@ class Circle(Canvas):
         self.values = values;
         
         # draw!
-        drawPolygons(self, values);
         drawCentre(self, publicWindow);
+        drawPolygons(self, publicWindow, values);
 
 kaoWin = KaoApp();

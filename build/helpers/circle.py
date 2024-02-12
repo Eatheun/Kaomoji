@@ -1,6 +1,7 @@
 from ..constants.constants import *
 from ..setup.kaoCat import *
 from tkinter import *
+from time import sleep
 import numpy as np
 from math import *
 import random
@@ -82,49 +83,60 @@ def calcPolyPoints(angOrd, radOrd):
             polyPoints.append(list(map(lambda j: calcCircXY(radOrd[i], a0 + j * step),range(angSteps))));
     return polyPoints;
 
+# animation for drawing the polygons
+def drawPolygonAnim(self, window, values, angles, i, currR):
+    self.delete(values[i]);
+    # current and next angle of each polygon
+    curr = radians(angles[i]);
+    next = curr + radians(360 / self.pcs);
+    
+    # order angles and radii for each corresponding point, with offsets
+    angOrd = [curr + self.outOff, next - self.outOff, next - self.inOff, curr + self.inOff];
+    radOrd = [currR, currR, inR, inR];
+    
+    self.create_polygon(
+        calcPolyPoints(angOrd, radOrd),
+        fill = fillCol,
+        width = lineWeight,
+        outline = outlineCol,
+        tags = ("polygon", values[i])
+    );
+    
+    # overlaying current value as text
+    midRad = (currR + inR) / 2;
+    midAng = (curr + next) / 2;
+    tag = values[i].replace(" ", "\n");
+    self.create_text(
+        calcCircXY(midRad, midAng),
+        anchor = CENTER,
+        font = (myFont, floor((4 / self.pcs) * baseFontSize * (currR - inR) / (outR - inR))), # scale with the current increment
+        fill = outlineCol,
+        text = tag,
+        tags = ("polygon", values[i])
+    );
+    if currR <= outR:
+        window.after(10, drawPolygonAnim, self, window, values, angles, i, currR + self.incrR);
+
+# another wrapper for a "fanning" effect
+def drawPolygonsWrap(self, window, values, angles, i):
+    drawPolygonAnim(self, window, values, angles, i, self.incrR + inR);
+    if i + 1 < self.pcs:
+        window.after(30, drawPolygonsWrap, self, window, values, angles, i + 1);
+
 # draw filled polygons
-def drawPolygons(self, values):
+def drawPolygons(self, window, values):
     # offset metrics
-    inOff = radians(min(self.angleOff, 180 / self.pcs));
-    outOff = atan((inR / outR) * (tan(inOff)));
+    self.inOff = radians(min(self.angleOff, 180 / self.pcs));
+    self.outOff = atan((inR / outR) * (tan(self.inOff)));
     
     # loop through angles as cosi + isini
     angles = np.linspace(90, 450, self.pcs + 1);
-    for i in range(self.pcs):
-        # current and next angle of each polygon
-        curr = radians(angles[i]);
-        next = curr + radians(360 / self.pcs);
-        
-        # order angles and radii for each corresponding point, with offsets
-        angOrd = [curr + outOff, next - outOff, next - inOff, curr + inOff];
-        radOrd = [outR, outR, inR, inR];
-        
-        self.create_polygon(
-            calcPolyPoints(angOrd, radOrd),
-            fill = fillCol,
-            width = lineWeight,
-            outline = outlineCol,
-            tags = ("polygon")
-        );
-        
-        # overlaying current value as text
-        midRad = (outR + inR) / 2;
-        midAng = (curr + next) / 2;
-        tag = values[i].replace(" ", "\n");
-        self.create_text(
-            calcCircXY(midRad, midAng),
-            anchor = CENTER,
-            font = (myFont, floor((4 / self.pcs) * baseFontSize)),
-            fill = outlineCol,
-            text = tag,
-            tags = ("polygon")
-        );
+    self.incrR = (outR - inR) / (steps << 1);
+    drawPolygonsWrap(self, window, values, angles, 0);
 
-# draw centre with window.quit() bound
-def drawCentre(self, window):
-    offSpace = sqrt(2 * (inR ** 2) * (1 - cos(radians(2 * self.angleOff))));
-    cCircOff = inR - offSpace;
-    p1, p2 = c - cCircOff + pad, c + cCircOff + pad;
+# animation for drawing centre of circle
+def drawCentreAnim(self, window, currIncr):
+    p1, p2 = c - currIncr + pad, c + currIncr + pad;
     self.create_oval(
         [(p1, p1), (p2, p2)],
         fill = fillCol,
@@ -135,12 +147,21 @@ def drawCentre(self, window):
     self.create_text(
         [(c + pad, c + pad)],
         anchor = CENTER,
-        font = (myFont, 18),
+        font = (myFont, int(18 * currIncr / self.cCircOff)), # scale with the current increment
         text = "X",
         fill = outlineCol,
         tags = ("centre")
     );
+    if currIncr <= self.cCircOff:
+        window.after(5, drawCentreAnim, self, window, currIncr + self.offIncr);
+
+# draw centre with window.quit() bound
+def drawCentre(self, window):
+    offSpace = sqrt(2 * (inR ** 2) * (1 - cos(radians(2 * self.angleOff))));
+    self.cCircOff = inR - offSpace;
+    self.offIncr = self.cCircOff / (steps << 1);
+    drawCentreAnim(self, window, self.offIncr);
     
     # binds the circle selecting to the circle
-    self.bind("<Button>", lambda event: interactCircle(event, self, cCircOff, window));
+    self.bind("<Button>", lambda event: interactCircle(event, self, self.cCircOff, window));
     
