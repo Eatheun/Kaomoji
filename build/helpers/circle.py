@@ -126,7 +126,7 @@ def drawPolygonAnim(self, window, values, angles, i, currR):
 def drawPolygonsFanWrap(self, window, values, angles, i):
     drawPolygonAnim(self, window, values, angles, i, self.incrR + inR);
     if i + 1 < self.pcs:
-        window.after(30, drawPolygonsFanWrap, self, window, values, angles, i + 1);
+        window.after(15, drawPolygonsFanWrap, self, window, values, angles, i + 1);
 
 # draw filled polygons
 def drawPolygons(self, window, values):
@@ -153,7 +153,7 @@ def drawCentreAnim(self, window, currIncr):
     self.create_text(
         [(c + pad, c + pad)],
         anchor = CENTER,
-        font = (myFont, int(18 * currIncr / self.cCircOff)), # scale with the current increment
+        font = (myFont, floor(18 * currIncr / self.cCircOff)), # scale with the current increment
         text = "X",
         fill = outlineCol,
         tags = ("centre")
