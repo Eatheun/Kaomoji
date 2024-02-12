@@ -1,7 +1,6 @@
 from ..constants.constants import *
 from ..setup.kaoCat import *
 from tkinter import *
-from time import sleep
 import numpy as np
 from math import *
 import random
@@ -85,7 +84,10 @@ def calcPolyPoints(angOrd, radOrd):
 
 # animation for drawing the polygons
 def drawPolygonAnim(self, window, values, angles, i, currR):
+    # grab global constants and delete old polygons
+    global outR, inR;
     self.delete(values[i]);
+    
     # current and next angle of each polygon
     curr = radians(angles[i]);
     next = curr + radians(360 / self.pcs);
@@ -94,6 +96,7 @@ def drawPolygonAnim(self, window, values, angles, i, currR):
     angOrd = [curr + self.outOff, next - self.outOff, next - self.inOff, curr + self.inOff];
     radOrd = [currR, currR, inR, inR];
     
+    # draw out the polygon
     self.create_polygon(
         calcPolyPoints(angOrd, radOrd),
         fill = fillCol,
@@ -114,6 +117,8 @@ def drawPolygonAnim(self, window, values, angles, i, currR):
         text = tag,
         tags = ("polygon", values[i])
     );
+    
+    # keep drawing if we haven't reached the outR yet
     if currR <= outR:
         window.after(10, drawPolygonAnim, self, window, values, angles, i, currR + self.incrR);
 
@@ -136,6 +141,7 @@ def drawPolygons(self, window, values):
 
 # animation for drawing centre of circle
 def drawCentreAnim(self, window, currIncr):
+    # draw the centre
     p1, p2 = c - currIncr + pad, c + currIncr + pad;
     self.create_oval(
         [(p1, p1), (p2, p2)],
@@ -152,6 +158,8 @@ def drawCentreAnim(self, window, currIncr):
         fill = outlineCol,
         tags = ("centre")
     );
+    
+    # expand the oval in an animation
     if currIncr <= self.cCircOff:
         window.after(5, drawCentreAnim, self, window, currIncr + self.offIncr);
 
